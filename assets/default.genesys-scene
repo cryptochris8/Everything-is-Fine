@@ -1,0 +1,230 @@
+{
+  "$objects": [
+    {
+      "$bc": "THREE.DirectionalLight",
+      "$id": 1,
+      "$value": {
+        "_": [
+          {
+            "$bc": "c",
+            "_": [
+              1,
+              0.930111,
+              0.83077
+            ]
+          },
+          10
+        ]
+      }
+    },
+    {
+      "$bc": "THREE.BoxGeometry",
+      "$id": 2,
+      "$value": {
+        "_": [
+          500,
+          0.1,
+          500
+        ]
+      }
+    },
+    {
+      "$bc": "THREE.MeshStandardMaterial",
+      "$id": 3,
+      "$value": {
+        "color": {
+          "$bc": "c",
+          "_": [
+            0.85,
+            0.85,
+            0.85
+          ]
+        },
+        "map": {
+          "$bc": "$global",
+          "name": "DefaultTexture"
+        },
+        "name": "GroundMaterial",
+        "roughness": 0.95,
+        "uuid": "8aed4ec2790ca7f8"
+      }
+    }
+  ],
+  "$root": {
+    "$bc": "ENGINE.World",
+    "children": [
+      {
+        "$bc": "ENGINE.DirectionalLightNode",
+        "$initOptions": {
+          "castShadow": true,
+          "color": {
+            "$bc": "c",
+            "_": [
+              1,
+              0.930111,
+              0.83077
+            ]
+          },
+          "drivesSky": true,
+          "intensity": 10,
+          "isRoot": true,
+          "shadowBias": -0.001,
+          "shadowCameraBottom": -200,
+          "shadowCameraLeft": -200,
+          "shadowCameraRight": 200,
+          "shadowCameraTop": 200,
+          "shadowFar": 250,
+          "shadowMapSize": 2048,
+          "shadowNear": 0.1,
+          "shadowNormalBias": 0,
+          "shadowRadius": 3,
+          "useCsmShadows": false
+        },
+        "castShadow": true,
+        "children": [
+          {
+            "$ref": 1
+          }
+        ],
+        "drivesSky": true,
+        "light": {
+          "$ref": 1
+        },
+        "name": "Directional Light",
+        "nodeId": 9630,
+        "position": {
+          "$bc": "v3",
+          "_": [
+            10,
+            50,
+            -10
+          ]
+        },
+        "rotation": {
+          "$bc": "e",
+          "_": [
+            1.919862,
+            0,
+            0
+          ]
+        },
+        "shadowBias": -0.001,
+        "shadowCameraBottom": -200,
+        "shadowCameraLeft": -200,
+        "shadowCameraRight": 200,
+        "shadowCameraTop": 200,
+        "shadowFar": 250,
+        "userData": {
+          "objectFlags": 2
+        },
+        "uuid": "aed4ec2790ca7f87"
+      },
+      {
+        "$bc": "ENGINE.PlayerStart",
+        "$initOptions": {},
+        "name": "Player Start",
+        "nodeId": 52682,
+        "position": {
+          "$bc": "v3",
+          "_": [
+            0,
+            0.9,
+            0
+          ]
+        },
+        "uuid": "ed4ec2790ca7f877"
+      },
+      {
+        "$bc": "ENGINE.MeshNode",
+        "$initOptions": {
+          "geometry": {
+            "$ref": 2
+          },
+          "isRoot": true,
+          "material": {
+            "$ref": 3
+          },
+          "physicsOptions": {
+            "collisionProfile": "BlockAll",
+            "enabled": true,
+            "motionType": "static"
+          },
+          "receiveShadow": true,
+          "uvScaleTilesPerUnit": 0.2
+        },
+        "children": {
+          "$length": 1
+        },
+        "geometry": {
+          "$ref": 2
+        },
+        "material": {
+          "$ref": 3
+        },
+        "name": "Ground",
+        "nodeId": 51052,
+        "position": {
+          "$bc": "v3",
+          "_": [
+            0,
+            -0.9,
+            0
+          ]
+        },
+        "receiveShadow": true,
+        "userData": {
+          "objectFlags": 2
+        },
+        "uuid": "d4ec2790ca7f877a",
+        "uvScaleTilesPerUnit": 0.2
+      },
+      {
+        "$bc": "ENGINE.SkyNode",
+        "$initOptions": {
+          "cloudDensity": 0.7,
+          "cloudElevation": 0.42,
+          "cloudSpeed": 0.00005,
+          "environmentMapIntensity": 1,
+          "generateEnvironmentMap": true,
+          "isRoot": true,
+          "mieDirectionalG": 0.85
+        },
+        "cloudDensity": 0.7,
+        "cloudElevation": 0.42,
+        "cloudSpeed": 0.00005,
+        "generateEnvironmentMap": true,
+        "mieDirectionalG": 0.85,
+        "name": "Sky",
+        "nodeId": 19158,
+        "scale": {
+          "$bc": "v3",
+          "_": [
+            10000,
+            10000,
+            10000
+          ]
+        },
+        "userData": {
+          "objectFlags": 2
+        },
+        "uuid": "4ec2790ca7f877ad"
+      }
+    ],
+    "editorData": {},
+    "gameModeClass": null,
+    "postProcessConfiguration": {
+      "effects": [
+        {
+          "enabled": true,
+          "exposure": 0.5,
+          "mode": 4,
+          "type": "toneMapping"
+        }
+      ]
+    },
+    "resources": null,
+    "settings": {},
+    "uuid": "ec2790ca7f877ad3"
+  },
+  "$version": 3
+}

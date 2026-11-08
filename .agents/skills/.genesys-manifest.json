@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": [
+    "asset-pack-authoring",
+    "behavior-tree",
+    "engine-reference",
+    "engine-search",
+    "engine-upgrades",
+    "genesys-asset-compiler",
+    "genesys-audio",
+    "genesys-blender-bridge",
+    "genesys-editor-manual",
+    "genesys-engine",
+    "genesys-mcp-orchestrator",
+    "genesys-movement",
+    "genesys-multiplayer",
+    "genesys-navigation",
+    "genesys-physics",
+    "genesys-prefabs",
+    "genesys-ui-kit",
+    "genesys-vfx",
+    "pickups-interactions-and-doors",
+    "webgpu-tsl-node-material-assets"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "outputs": [
+        "dist/**"
+      ],
+      "inputs": [
+        "src/**",
+        "tsconfig*.json",
+        "vite.config.*",
+        "package.json"
+      ]
+    }
+  }
+}

@@ -1,0 +1,44 @@
+# GENESYS-SDK-BEGIN
+# The following section is managed by the Genesys SDK.
+# It will be updated when you update the SDK.
+# Add your custom ignore patterns AFTER this section (below GENESYS-SDK-END).
+
+**/.dist/**
+**/node_modules/**
+**/.engine/**
+**/**dist/**
+**/**editor/**
+**/.DS_Store
+**/*.tgz
+**/*.mcp-port
+.cursor/mcp.json
+**/.placeholder
+# Regenerated on every project create/update/open (see skills-sync.ts); never commit the link itself.
+.claude/skills
+# Ignore all of .genesys except the sdk/ folder (SDK base files)
+**/.genesys/*
+!.genesys/sdk/
+!.genesys/sdk/**
+**/logs/**
+**/.turbo/**
+**/.cache/**
+**/.intermediate/*
+
+# GENESYS-SDK-END
+
+# ============================================
+# Add your custom gitignore patterns below
+# ============================================
+
+# EVERYTHING IS FINE!
+node_modules
+.dist/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+.vite.started
+tools/_out/
+tools/_audio-raw/
+Everything_Is_Fine_Claude_Code_Blueprint.zip

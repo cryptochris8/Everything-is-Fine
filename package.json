@@ -1,0 +1,46 @@
+{
+  "scripts": {
+    "build": "pnpm run generate-property-metadata && pnpm exec tsx ./scripts/genesys/sync-packs-tsconfig.ts && tsc && pnpm exec tsx ./scripts/genesys/write-build-stamp.ts",
+    "turbo:build": "turbo run build",
+    "generate-property-metadata": "pnpm exec tsx node_modules/@gnsx/genesys.js/scripts/generate-property-metadata.ts src/game-data.ts",
+    "preinstall": "node -e \"try{require('child_process').execSync('pnpm remove @gnsx/genesys.harness',{stdio:'pipe'})}catch(e){}\"",
+    "postinstall": "pnpm exec tsx ./scripts/genesys/post-install.ts",
+    "lint": "eslint . --fix --ext .ts,.tsx",
+    "remove-engine-comments": "pnpm exec tsx ./scripts/genesys/remove-engine-comments.ts",
+    "dev": "pnpm exec tsx ./scripts/genesys/dev/generate-manifest.ts && vite",
+    "check-pack-isolation": "pnpm exec tsx ./scripts/genesys/check-pack-isolation.ts",
+    "export-pack": "pnpm exec tsx ./scripts/genesys/export-pack.ts",
+    "install-developer-skills": "pnpm exec tsx ./scripts/genesys/install-developer-skills.ts"
+  },
+  "packageManager": "pnpm@12.6.0",
+  "type": "module",
+  "dependencies": {
+    "three": "npm:@gnsx/three@0.186.8",
+    "@gnsx/genesys.js": "18.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  },
+  "devDependencies": {
+    "@types/node": "25.9.3",
+    "@types/three": "npm:@gnsx/three-types@0.186.3",
+    "@typescript-eslint/parser": "8.66.0",
+    "@typescript-eslint/utils": "8.66.0",
+    "@typescript-eslint/eslint-plugin": "8.66.0",
+    "adm-zip": "0.5.17",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.4",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-unused-imports": "4.4.1",
+    "tsx": "4.23.7",
+    "turbo": "2.11.4",
+    "typescript": "6.0.3",
+    "vite": "8.2.1",
+    "vite-plugin-mkcert": "2.1.0",
+    "vite-plugin-node-polyfills": "0.28.0",
+    "@types/adm-zip": "0.5.8"
+  },
+  "name": "EverythingIsFine",
+  "version": "0.0.1"
+}
