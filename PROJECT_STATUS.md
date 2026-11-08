@@ -115,8 +115,7 @@ They also cover systems (toy, grab, sprinkler, valve chain), interactions, chaos
 - Only 3 free-roam encounters, so the gnome heist and the Mow-Bot recur most days.
 - Engine-18 spawn quirk is worked around (a teleport 1.5 s after spawn). During that first 1.5 s the player stands slightly sunk.
 - Two console 404s on boot that aren't game requests (the probe's network log shows 0 failed requests; probably the favicon).
-- Line endings are mixed (CRLF from some edits). Harmless; normalize before the first commit.
-- **Nothing is committed yet.** The repo has no commits; Chris hasn't asked for one.
+- First commit `4bea0ed` on `master` (2026-11-07, at Chris's request). No remote yet: Chris is creating the GitHub repo.
 
 ## Next steps (in order)
 1. **Chris:** play it at http://127.0.0.1:5207/ (run `bash tools/check.sh --serve` first). Is it funny in 30 s? Which bits land?

@@ -13,7 +13,7 @@
 
 What doesn't exist yet:
 - It has **not** been uploaded through Studio.
-- **Nothing is committed** (the repo has zero commits).
+- **First commit is `4bea0ed`** on `master` (2026-11-07). No remote yet.
 
 ## First moves
 1. Start the server: `bash tools/check.sh --serve`, then go to http://127.0.0.1:5207/.
@@ -47,4 +47,4 @@ What doesn't exist yet:
 ## Open decisions for Chris
 - Title and branding clearance (not technical).
 - The player character's look: currently a teal-tee "new neighbor" from the Bad Hair Day kit. Should there be a customiser?
-- Whether to commit and push to a GitHub repo, and its name.
+- The GitHub repo Chris is creating: add it as `origin` and push `master` once he gives the URL.
