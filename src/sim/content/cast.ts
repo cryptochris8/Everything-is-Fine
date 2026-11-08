@@ -95,6 +95,9 @@ export const CAST: readonly ActorDef[] = [
       { at: 'lindaGnome', offset: { x: 1.2, z: 0 }, wait: [3, 5], anim: 'write', bark: ['Sir Reginald, you look immaculate.'], barkChance: 0.5 },
     ],
     talk: [
+      { when: { memory: 'hoa.rule.poultry_office' }, lines: ['The chickens have filed an appeal. It is very well written. I hate that.', 'Poultry may not hold office. They may, however, attend meetings. They attend every meeting.'] },
+      { when: { memory: 'hoa.rule.cat_vehicles' }, lines: ['Cats may no longer operate vehicles. I had to define "vehicle." It took four pages.', 'I walked the whole street with my clipboard. Spotless. I have never been so upset.'] },
+      { when: { memory: 'linda.forms_saved' }, lines: ['You saved the bylaws. I have mentioned you in the minutes. Twice. Once in bold.'] },
       { when: { memory: 'hoa.rule.airborne_catering' }, lines: ['Rule 14-B: catering must remain grounded at all times. I wrote it for you. Personally.', 'Per the new bylaws, burgers may not exceed an altitude of four feet.'] },
       { when: { memory: 'hoa.rule.water_events' }, lines: ['All water-based social events now require a Puddle Permit. Form 7-W. In triplicate.'] },
       { when: { memory: 'hoa.rule.chicken_seating' }, lines: ['Poultry may no longer occupy VIP seating. They were very polite about it, which made it harder.'] },
@@ -118,6 +121,8 @@ export const CAST: readonly ActorDef[] = [
       { at: 'earlMailbox', offset: { x: 0.8, z: 1.2 }, wait: [3, 5], anim: 'point', bark: ['Self-opening mailbox, version nine. Stand back. Further.'], barkChance: 0.6 },
     ],
     talk: [
+      { when: { memory: 'squirrels_have_cake' }, lines: ['Parcel Pitcher 2 will have a squirrel deterrent. Probably a bigger squirrel.'] },
+      { when: { memory: 'granny.cake_saved' }, lines: ['The Parcel Pitcher delivered a cake to a roof with zero casualties. I count that as a win.'] },
       { when: { memory: 'flipper_flung' }, lines: ['Flip-O-Matic 4000 is almost ready. Now it flips the burgers AND apologizes.', 'I added a seatbelt to the spatula. For the burgers.'] },
       { when: { memory: 'mower_art' }, lines: ['Mow-Bot learned art. I didn\'t teach it art. I\'m very proud and a little scared.'] },
       { when: { memory: 'chickens_freed' }, lines: ['The chickens have tasted freedom. Now they want dental.'] },
@@ -139,6 +144,9 @@ export const CAST: readonly ActorDef[] = [
       { at: 'grannyGarden', offset: { x: 1.4, z: 0 }, wait: [5, 7], anim: 'proud', bark: ['Those tomatoes have seen things.'], barkChance: 0.4 },
     ],
     talk: [
+      { when: { memory: 'squirrels_have_cake' }, lines: ['I TOLD everyone the squirrels were organizing. Now they have cake. That is how it starts.', 'The squirrels left me a thank-you note. It was a walnut. I am not afraid. I am prepared.'] },
+      { when: { memory: 'granny.cake_saved' }, lines: ["Did you like the cake? Don't answer. I could see it on your face. And your shirt.", 'Next time I bake for you, I am WALKING it over. Earl is banned from cakes.'] },
+      { when: { memory: 'admiral_cleaned_street' }, lines: ['Admiral Biscuit cleaned the whole street. I raised a leader.'] },
       { when: { memory: 'deputized' }, lines: ['Morning, Deputy. Keep your eyes peeled. The squirrels are organizing.', "Deputy! Good. I need backup. For nothing yet. But soon."] },
       { when: { memory: 'granny.cart_crash' }, lines: ['That hedge jumped out at me. I\'ve filed a report against the hedge.', 'The cart has a new dent. I call it character.'] },
       { lines: ["Don't you worry. I've handled worse at the church potluck.", 'Need a ride? The cart does zero to thirty. Mostly sideways.', 'I keep the peace around here. Mostly by disturbing it first.'] },
@@ -202,6 +210,25 @@ export const CAST: readonly ActorDef[] = [
     traits: ['opportunistic', 'loud'],
     routine: [{ at: 'coop', wait: [6, 10], anim: 'sniff' }],
     talk: [{ lines: ['The chickens regard you with open suspicion.', 'One chicken steps forward. It seems to be their lawyer.'] }],
+  },
+  {
+    id: 'cat',
+    name: 'Admiral Biscuit',
+    role: "Granny's cat, captain of a robot vacuum",
+    home: 'grannyPorch',
+    homeOffset: { x: 2.2, z: 1.6 },
+    speed: 1,
+    verb: 'Scoop up Admiral Biscuit',
+    size: 'small',
+    traits: ['nautical', 'aloof', 'vacuum-mounted'],
+    routine: [
+      { at: 'grannyPorch', offset: { x: 2.2, z: 1.6 }, wait: [10, 16], anim: 'sit' },
+      { at: 'grannyGarden', offset: { x: 2.6, z: 1.2 }, wait: [6, 9], anim: 'sniff' },
+    ],
+    talk: [
+      { when: { memory: 'admiral_cleaned_street' }, lines: ['Admiral Biscuit wears a tiny medal now. Nobody knows who gave it to him.', 'The county offered Admiral Biscuit a street-cleaning contract. He is considering it.'] },
+      { lines: ['Admiral Biscuit does not wish to be scooped. He is on duty.', 'Admiral Biscuit blinks at you slowly. You have been promoted to deckhand.', 'The robot vacuum hums. Admiral Biscuit stares at the horizon.'] },
+    ],
   },
 ];
 

@@ -8,7 +8,9 @@
 - **Controls and camera are Athlete Domains' exactly** (ADR-019): camera-relative walk/run/jump, a drag-to-look orbit camera with no pointer lock, the floating phone stick, the same controller layout. The game's own actions are Enter (interact), T (throw), 1–3 (replies); on the controller, X and Y. `node tools/probe-input.cjs` checks 32 behaviours. Not yet tried on a real controller or phone.
 - **Art (2026-11-07):** code-built models ported from Bad Hair Day (skinned cast and the player, Brisket) and Trash Panda (houses, props, trees, fences, cars), plus originals (cart, Mow-Bot, grill, workshop, chickens) and a Skybox-library toon sky. See `docs/ART_SOURCES.md`, ADR-016–018. `?oldart=1` gives the old look and `?gallery=1` a model line-up.
 - **The day:** the 30-second opening gag and Big Randy's Cookout run end-to-end, with 3 complications and 8 truthful endings.
-- **The world:** 3 free-roam encounters and 7 ambient gags; the Chaos Meter with its Block Party finale; persistent NPC memory and callbacks; the Channel 4 news end card.
+- **The world:** 6 free-roam encounters and 7 ambient gags; the Chaos Meter with its Block Party finale; persistent NPC memory and callbacks; the Channel 4 news end card.
+  - The new encounters (ADR-020): Admiral Biscuit on the robot vacuum, Granny's cake on your roof (with Earl's ladder), and Linda's forms in the wind.
+- **Audio (ADR-021):** an ElevenLabs theme song with sung lyrics, street and chaos music beds, 29 effects plus ambience, and 206 voiced lines across six voices, including the news anchor. 95/95 tests pass.
 - **Verification:** an autopilot played a full day in the browser (screenshots in `tools/_out/`).
 
 What doesn't exist yet:
@@ -24,6 +26,10 @@ What doesn't exist yet:
 3. Verify visually with `tools/probe.cjs`. It boots in ~6 s, and a `?bot=helpful&timescale=3` day takes ~90 s of wall time.
 
 ## Gotchas already paid for
+- **The dev page runs the BUILT bundle (`.dist/game.js`), not the source.** After any code change, run `bash tools/check.sh` before probing, or the browser shows the old game. This cost an hour of confusion on 2026-11-07.
+- **Probe `--shots` share one global scope.** Wrap each shot in `{ ... }` and use `let`, or the second `const s` throws and every later shot silently does nothing.
+- **Voice lines are keyed by exact text.** Editing a `say` line or a `talk` line un-voices it (it falls back to the blip) until `tools/build-audio.mjs` is re-run. That only bills the changed lines.
+- **Audio needs a gesture.** `Show.unlockAudio()` runs on every key, click and tap. `__eif.audio()` reads the state.
 - **Spawn quirk.** The engine's initial spawn, and teleports in the pawn's first ~1 s, place the capsule ~2 m low. `Show.spawnSettled` re-teleports at 1.5 s; don't remove it.
 - **Ground height.** The ground top is `G = -0.85`.
 - **No pointer lock** (Athlete Domains): looking is right-mouse drag, or a left-drag on the right half of the screen.
@@ -48,3 +54,4 @@ What doesn't exist yet:
 - Title and branding clearance (not technical).
 - The player character's look: currently a teal-tee "new neighbor" from the Bad Hair Day kit. Should there be a customiser?
 - The GitHub repo Chris is creating: add it as `origin` and push `master` once he gives the URL.
+- Audio taste: how does the theme song land? Is the voice cast right? Should captions get a narrator, and should there be a separate music-volume slider?

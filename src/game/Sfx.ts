@@ -85,6 +85,24 @@ const VOICES: Record<string, Voice> = {
   award: (c, o, t) => [784, 988, 1175, 1568].forEach((f, i) => tone(c, o, t + i * 0.09, 'triangle', f, f, 0.25, 0.15)),
   rule: (c, o, t) => [440, 349].forEach((f, i) => tone(c, o, t + i * 0.18, 'square', f, f, 0.18, 0.08)),
   news: (c, o, t) => [392, 523, 659, 784, 659].forEach((f, i) => tone(c, o, t + i * 0.14, 'triangle', f, f, 0.22, 0.14)),
+  vacuum: (c, o, t) => {
+    noise(c, o, t, 1.4, 0.12, 700, 1.4);
+    tone(c, o, t, 'sawtooth', 110, 118, 1.4, 0.04);
+  },
+  meow: (c, o, t) => {
+    tone(c, o, t, 'triangle', 520, 880, 0.18, 0.18);
+    tone(c, o, t + 0.16, 'triangle', 880, 420, 0.32, 0.16);
+  },
+  thwump: (c, o, t) => {
+    tone(c, o, t, 'sine', 90, 40, 0.35, 0.5);
+    noise(c, o, t + 0.05, 0.5, 0.25, 1200, 0.5);
+  },
+  splat: (c, o, t) => {
+    noise(c, o, t, 0.25, 0.4, 500, 0.7);
+    tone(c, o, t, 'sine', 220, 70, 0.2, 0.25);
+  },
+  chitter: (c, o, t) => [0, 0.07, 0.14, 0.21, 0.35, 0.42].forEach((d) => tone(c, o, t + d, 'square', 2400, 1700, 0.04, 0.06)),
+  wind: (c, o, t) => noise(c, o, t, 1.8, 0.28, 450, 0.3),
   talk: (c, o, t) => tone(c, o, t, 'triangle', 300 + Math.floor(t * 7919) % 200, 260, 0.06, 0.06),
 };
 

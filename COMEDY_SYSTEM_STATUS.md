@@ -46,6 +46,16 @@ Spine: arrival gag → meet Randy (2 replies) → fetch charcoal from Earl's gar
 - **Mow-Bot Has Ambitions:** hit its switch, or it mows a giant arrow across 3 lawns pointing at Linda's house. The mowed trail stays on the lawn.
 - **The Sir Reginald Affair:** protect the gnome, or chase Brisket and return it, or it joins his 11-gnome collection (Gnome Watch rule).
 - **The Great Escape (Poultry Edition):** shoo the chickens home, or they take the picnic table's VIP seats.
+- **Admiral Biscuit Sets Sail** (added 2026-11-07): Granny's cat (new actor `cat`, in a tiny admiral's hat) rides a robot vacuum down Maple Street. Three beats: he sets sail; at 14 s he starts cleaning and Linda notices; then he finishes.
+  - Scoop him up and Granny thanks her "Deputy".
+  - Let it happen and the whole street is spotless. Linda can't find a violation ("I hate this"). New rule: cats may not operate vehicles.
+- **Express Delivery** (added 2026-11-07): Granny baked you a welcome cake; Earl "delivers" it with the Parcel Pitcher onto your roof.
+  - Fetch Earl's ladder (new prop) from his garage and lean it on your house to rescue the cake.
+  - At 30 s a scout squirrel appears. Too slow and the squad eats it in shifts: "I TOLD you the squirrels were organizing!" (the payoff to Granny's routine bark). New rule: no launching baked goods across property lines.
+  - Putting the ladder down sends you back for it; it is never a soft-lock.
+- **Gone With the Wind (In Triplicate)** (added 2026-11-07): Linda's 400-page forms blow away in three gusts. Grab them on the ground between gusts and hand them back to the HOA board for a laminated award.
+  - The fourth gust drops them in Earl's chicken coop. The chickens sign every page and are now, legally, the HOA. New rule: poultry may not hold elected office.
+- All three are tested both ways (`tests/encounters.test.ts`): the fix path and the let-it-happen path, with their facts, memories, rules and news stories. Each payoff feeds tomorrow: Linda, Granny and Earl have new callback lines.
 
 ### Ambient micro-gags (`ambient.ts`)
 - Todd's trampoline commute.
@@ -95,8 +105,8 @@ Affinity per NPC shifts Randy's greeting and Director scoring.
 1. **Competent play is too often "classic".** A helpful player foils most complications, so the cookout ends calmly.
    - Add rule-of-three twists: after a foil, escalate sometimes (Brisket steals Linda's clipboard instead; the sprinkler you prevented triggers on Linda's inspection).
    - Make the "classic" ending reference what was foiled.
-2. GNOME_HEIST and MOWER_RUNAWAY appear on most days because there are only 3 free-roam encounters. More are needed (blueprint 05 seeds: PET-01 cat on a robot vacuum, PARTY-01 cake on the roof, HOA-02 wind takes the forms, ECHO-01 quiet machine).
+2. There are now 6 free-roam encounters (PET-01, PARTY-01 and HOA-02 were added 2026-11-07). Still to write from blueprint 05: ECHO-01 quiet machine.
 3. Only one mission. Next is GOLF-01 "Deliver a package", where Granny offers a ride.
 4. The player can't ride the golf cart; it's simulated as Granny taking the cargo. A vehicle mount is a later engine task.
-5. There is no spoken VO. Lines are bubbles and captions.
+5. Spoken VO (2026-11-07): all 206 fixed neighbour lines and the news anchor are voiced (ElevenLabs, ADR-021). Lines with `{name}` tokens and captions stay text-only. **Changing a line's text un-voices it** until `tools/build-audio.mjs` is re-run (it falls back to the talk blip).
 6. The "Flavor Event" fallback cannot run once the grill is a camp stove, so a day can have no cooking complication. Needs a camp-stove variant.

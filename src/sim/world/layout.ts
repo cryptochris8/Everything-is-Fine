@@ -120,6 +120,10 @@ export const SPOTS = {
   lindaHedges: { x: -36, z: 9 },
   lindaGnome: { x: -30, z: 11 },
   playerPorch: { x: 0, z: -20 },
+  /** On your own roof (the welcome cake lands here). */
+  playerRoof: { x: 4.5, z: -23 },
+  /** Where Earl's ladder leans against the front of your house. */
+  playerLadder: { x: 3.6, z: -20.7 },
   movingBoxes: { x: 3, z: -10 },
   park: { x: 30, z: -18 },
   gazebo: { x: 32, z: -20 },

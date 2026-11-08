@@ -20,6 +20,7 @@ import {
   trampolineGeometry,
   workshopGeometry,
 } from '../src/game/art/yard.ts';
+import { admiralCatGeometry, formsGeometry, ladderGeometry, robotVacuumGeometry, sheetGeometry, squirrelGeometry, welcomeCakeGeometry } from '../src/game/art/encounterModels.ts';
 
 const ALL_ANIMS: ActorAnim[] = ['idle', 'wave', 'cheer', 'facepalm', 'shrug', 'point', 'flail', 'spin', 'sit', 'write', 'grill', 'dance', 'tumble', 'proud', 'sniff', 'beg'];
 
@@ -90,6 +91,14 @@ const BUILDERS: [string, () => THREE.BufferGeometry][] = [
   ['burger', () => burgerGeometry(0x6e3b1f, 0xf0b459)],
   ['chicken', chickenGeometry],
   ['workshop', workshopGeometry],
+  ['robotVacuum', robotVacuumGeometry],
+  ['admiralCat', admiralCatGeometry],
+  ['cake', () => welcomeCakeGeometry(false)],
+  ['cakeEaten', () => welcomeCakeGeometry(true)],
+  ['squirrel', squirrelGeometry],
+  ['ladder', ladderGeometry],
+  ['forms', formsGeometry],
+  ['sheet', sheetGeometry],
 ];
 
 test('yard models: inked toon geometry with the attributes modelMaterial needs', () => {
@@ -142,4 +151,21 @@ test('yard models: sizes the sim relies on', () => {
   const c = box(golfCartGeometry());
   assert.ok(c.max.y > 1.9 && c.max.y < 2.3);
   assert.ok(c.max.x - c.min.x < 1.7);
+});
+
+test('encounter models: sizes the scenarios rely on', () => {
+  const box = (g: THREE.BufferGeometry) => {
+    g.computeBoundingBox();
+    return g.boundingBox!;
+  };
+  // The ladder must reach a bungalow eave (~3.3 m) when leaned at 0.27 rad.
+  const ladder = box(ladderGeometry());
+  assert.ok(ladder.max.y * Math.cos(0.27) > 3.1, `ladder reach ${ladder.max.y}`);
+  // The admiral fits on his vacuum: cat footprint inside the disc.
+  const cat = box(admiralCatGeometry());
+  const vac = box(robotVacuumGeometry());
+  assert.ok(cat.max.x <= vac.max.x + 0.02 && cat.min.x >= vac.min.x - 0.02, 'the cat overhangs the vacuum');
+  // Whole cake and eaten cake really differ; the eaten one is shorter.
+  assert.ok(box(welcomeCakeGeometry(true)).max.y < box(welcomeCakeGeometry(false)).max.y);
+  assert.equal(welcomeCakeGeometry(false), welcomeCakeGeometry(false));
 });

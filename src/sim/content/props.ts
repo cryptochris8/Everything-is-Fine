@@ -229,7 +229,57 @@ export const PROPS: readonly PropDef[] = [
     inspect: 'Unpack a box',
     interactRadius: 2.2,
   },
+  {
+    id: 'cake',
+    name: "Granny's welcome cake",
+    category: 'food',
+    home: 'earlWorkbench',
+    offset: { x: -1.6, z: 0.2 },
+    y: 0.95,
+    initial: 'boxed',
+    states: ['boxed', 'airborne', 'roof', 'scouted', 'carried', 'dropped', 'rescued', 'delivered', 'squirreled'],
+    carry: true,
+    throwable: false,
+    placeTargets: [{ spot: 'playerPorch', r: 2.6, y: 0, verb: 'Set the cake on your porch', state: 'delivered', fact: 'cake_delivered' }],
+  },
+  {
+    id: 'ladder',
+    name: "Earl's ladder",
+    category: 'tool',
+    home: 'earlGarage',
+    offset: { x: 3, z: 0 },
+    y: 0,
+    initial: 'stored',
+    states: ['stored', 'carried', 'dropped', 'leaning'],
+    carry: true,
+    throwable: false,
+    placeTargets: [{ spot: 'playerLadder', r: 2.6, y: 0, verb: 'Lean the ladder against your house', state: 'leaning', fact: 'ladder_leaned' }],
+  },
+  {
+    id: 'forms',
+    name: "Linda's HOA forms",
+    category: 'tool',
+    home: 'hoaBoard',
+    offset: { x: 1.4, z: -0.9 },
+    y: 0,
+    initial: 'stacked',
+    states: ['stacked', 'blowing', 'carried', 'dropped', 'rescued', 'filed', 'signed'],
+    carry: true,
+    throwable: true,
+    light: true,
+    placeTargets: [{ spot: 'hoaBoard', r: 2.6, y: 0, verb: 'Hand the forms back to the HOA board', state: 'filed', fact: 'forms_filed' }],
+  },
 ];
+
+/** "the bag of charcoal", but "Earl's ladder" and "Sir Reginald (garden gnome)" (names and possessives take no article). */
+export function theProp(name: string): string {
+  return /^[A-Z]/.test(name) ? name : `the ${name}`;
+}
+
+/** Sentence-start form of theProp. */
+export function TheProp(name: string): string {
+  return /^[A-Z]/.test(name) ? name : `The ${name}`;
+}
 
 export const PROP_BY_ID: ReadonlyMap<string, PropDef> = new Map(PROPS.map((p) => [p.id, p]));
 

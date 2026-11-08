@@ -21,7 +21,7 @@ _Updated 2026-11-07 (session 1)._
 - original cart, Mow-Bot, grill, workshop and chickens;
 - toon sky.
 
-Screenshots are in `tools/_out/dress_*.png`, `close_a.png` and `artday_*.png`. Controller and touch are done (ADR-015). Audio/VO and the Studio upload are still to do. |
+Screenshots are in `tools/_out/dress_*.png`, `close_a.png` and `artday_*.png`. Controller and touch are done (ADR-015). **Audio done** (ADR-021): theme song, music beds, 29 effects and 206 voiced lines. Three more encounters (ADR-020). The Studio upload is still to do. |
 
 ## How to run
 Use Bash from the project root.
@@ -61,7 +61,7 @@ Then open the dev page at **http://127.0.0.1:5207/** in Chrome.
 
 **Touch** (auto on phones, or `?touch=1`): a floating stick wherever your thumb lands on the left side (push to the rim to run) · drag on the right side to look · **JUMP** · **USE** · **THROW** · ❚❚ pause · tap a reply. The pause menu has an "I'm stuck!" button.
 
-## Tests (all passing: 74/74)
+## Tests (all passing: 95/95)
 ```bash
 ./node_modules/.bin/tsx --test tests/*.test.ts     # ~20 s
 ./node_modules/.bin/tsx tools/sweep.ts 8           # seed sweep summary: outcomes + incident mix
@@ -69,6 +69,13 @@ node tools/probe.cjs "http://127.0.0.1:5207/?bot=helpful&seed=21&timescale=3" to
   --shots "a=0;;b=0;;c=0;;d=0;;e=0;;f=0;;g=0;;h=0;;i=0;;j=0;;k=0;;l=0" --shot-settle 7000 --eval "JSON.stringify(__eif.stats())"
 node tools/probe-input.cjs                         # Athlete Domains controls: fake gamepad + keyboard/mouse + emulated phone, 32 checks (~3 min)
 ```
+
+**Audio** (ElevenLabs, baked once; files are kept, re-runs only make what's missing):
+```bash
+ELEVENLABS_API_KEY=$(head -1 /c/Users/chris/elevenlabs.txt | tr -d '\r\n ') ./node_modules/.bin/tsx tools/build-audio.mjs [--only=music|sfx|voice] [--id=<id>] [--force]
+./node_modules/.bin/tsx tools/build-audio.mjs --dry   # what is missing and what it would cost (no key needed)
+```
+Then run `bash tools/check.sh --manifest`. In the browser, `__eif.audio()` shows the bed levels, whether someone is talking, and how many voice lines have played.
 The tests cover blueprint 08 functional tests 1–9:
 - determinism and replay;
 - reservations;
@@ -102,6 +109,11 @@ They also cover systems (toy, grab, sprinkler, valve chain), interactions, chaos
 | `src/game/art/` | **code-built model kits** (see `docs/ART_SOURCES.md`): `render/` builder + WebGPU materials, `family/` skinned humans + dog (Bad Hair Day), `tp/` houses/props/scenery (Trash Panda), `neighbors.ts` cast outfits, `yard.ts` originals, `street.ts` placement, `animMap.ts`, `gallery.ts` |
 | `src/game/CastViews.ts` | actor views for the cast + Brisket on the skinned rigs |
 | `src/game/ShippedAssets.ts` | literal asset paths for the Studio build (keep in sync with `assets/`) |
+| `src/game/GameAudio.ts` | recorded music/effects/voices through the engine (beds crossfade, voices queue and duck) |
+| `src/game/audioPlan.ts` | engine-free audio decisions (which bed, levels, ducking, voice queue, news script), tested |
+| `src/game/audioManifest.ts` | **generated** by `tools/build-audio.mjs`: literal audio paths + the voice-line index |
+| `src/game/art/encounterModels.ts` | Admiral Biscuit + vacuum, welcome cake (whole / squirrel-eaten), squirrel, ladder, HOA forms |
+| `tools/build-audio.mjs`, `tools/audio-catalog.mjs` | ElevenLabs bake: the song and music prompts, effect prompts, the voice cast and line extraction |
 | `tools/` | `check.sh`, `probe.cjs` (headless Chrome), `probe-input.cjs` (gamepad + touch checks), `sweep.ts` |
 | `Everything_Is_Fine_Blueprint/` | the original 11 blueprint docs (unchanged) |
 
@@ -110,9 +122,9 @@ They also cover systems (toy, grab, sprinkler, valve chain), interactions, chaos
 - The art is code-built from the in-house kits (ADR-016).
   - The engine mannequin is gone.
   - Not yet checked on an integrated GPU or a phone. The laptop's dedicated GPU runs at ~140 fps.
-- No music; stingers are synthesized. No voice-over.
+- Audio is recorded (ADR-021). It has been verified by levels and a transcript only; nobody has listened through speakers yet. Lines with `{name}` tokens and captions are not voiced.
 - A competent player gets the "classic" ending often. Needs foil-twists (COMEDY_SYSTEM_STATUS #1).
-- Only 3 free-roam encounters, so the gnome heist and the Mow-Bot recur most days.
+- 6 free-roam encounters now (cat on a vacuum, cake on the roof and HOA forms in the wind added 2026-11-07).
 - Engine-18 spawn quirk is worked around (a teleport 1.5 s after spawn). During that first 1.5 s the player stands slightly sunk.
 - Two console 404s on boot that aren't game requests (the probe's network log shows 0 failed requests; probably the favicon).
 - First commit `4bea0ed` on `master` (2026-11-07, at Chris's request). No remote yet: Chris is creating the GitHub repo.
@@ -120,10 +132,10 @@ They also cover systems (toy, grab, sprinkler, valve chain), interactions, chaos
 ## Next steps (in order)
 1. **Chris:** play it at http://127.0.0.1:5207/ (run `bash tools/check.sh --serve` first). Is it funny in 30 s? Which bits land?
 2. Studio upload pass: open Studio on this folder, decline the engine bump, run the version-triple check, Build, upload, probe the draft link, test localStorage on the host.
-3. Comedy depth: foil-twists (rule of three); 3 more encounters (cat on a robot vacuum, cake on the roof, wind steals the HOA forms); a camp-stove complication.
+3. Comedy depth: foil-twists (rule of three) on the BBQ complications; a camp-stove complication; ECHO-01. (The three encounters were done 2026-11-07.)
 4. Second mission: GOLF-01 package delivery with Granny.
 5. Presentation:
-   - ElevenLabs stingers and a light music bed, and a title wordmark.
+   - A title wordmark. (Music, effects and voices were done 2026-11-07, ADR-021. Next: voice the captions with a narrator? A separate music-volume slider?)
    - Art polish ideas: Linda's clipboard prop in hand, a Granny sun hat, and grass/flower detail on the lawns.
    - Player look options (the character is currently a teal-tee "new neighbor").
 6. Mobile pass on a real phone and a real controller (both pass emulated checks); measure on the iGPU.

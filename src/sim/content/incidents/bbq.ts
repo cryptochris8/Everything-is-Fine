@@ -644,7 +644,7 @@ export const DOG_STEALS_BURGERS: IncidentDef = {
             [{ route: 'thief', via: ['randyLawnWest', 'streetGranny', 'cartPark', 'grannyGarden', 'streetGranny', 'dogHouse'], style: 'run', pauses: 0.9 }, { fact: 'dog_route', value: 'granny' }],
           ],
         },
-        { objective: 'Get the burgers back! Catch Brisket, throw his squeaky toy (F), or ask a neighbor for help', target: { actor: 'thief' } },
+        { objective: 'Get the burgers back! Catch Brisket, throw his squeaky toy at him, or ask a neighbor for help', target: { actor: 'thief' } },
       ],
       timeout: { sec: 0.2, to: 'chase' },
     },

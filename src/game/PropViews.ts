@@ -12,6 +12,7 @@ import type { ActorState, PropState } from '../sim/world/state.js';
 import { Batch, batchMaterial } from './Batch.js';
 import { G } from './Neighborhood.js';
 import { modelMaterial } from './art/render/models/materials.js';
+import { formsGeometry, ladderGeometry, sheetGeometry, squirrelGeometry, welcomeCakeGeometry } from './art/encounterModels.js';
 import { burgerGeometry, campStoveGeometry, golfCartGeometry, gnomeGeometry, kettleGrillGeometry, platterGeometry } from './art/yard.js';
 
 /** `?oldart=1` keeps the session-1 primitive props (comparison / fallback). */
@@ -348,6 +349,114 @@ class MailboxView implements PropView {
   }
 }
 
+/** Granny's welcome cake; on the roof a scout squirrel, then the whole squad, appear. */
+class CakeView implements PropView {
+  public readonly root: ENGINE.SceneNode;
+  private readonly whole: ENGINE.MeshNode;
+  private readonly eaten: ENGINE.MeshNode;
+  private readonly squad: ENGINE.MeshNode[] = [];
+  public constructor(world: ENGINE.World, public readonly id: string) {
+    this.root = ENGINE.SceneNode.create({ name: 'Prop:cake' });
+    this.root.scale.setScalar(1.35); // a proper welcome cake, readable on a roof from the street
+    this.whole = artNode(welcomeCakeGeometry(false), 'Cake');
+    this.eaten = artNode(welcomeCakeGeometry(true), 'CakeEaten');
+    this.root.add(this.whole);
+    this.root.add(this.eaten);
+    const spots = [[0.42, 0.05], [-0.36, 0.25], [0.05, -0.42], [-0.3, -0.3]] as const;
+    for (const [x, z] of spots) {
+      const sq = artNode(squirrelGeometry(), 'Squirrel', new THREE.Vector3(x, 0, z));
+      sq.rotation.y = Math.atan2(-x, -z); // face the cake
+      this.squad.push(sq);
+      this.root.add(sq);
+    }
+    world.add(this.root);
+  }
+  public update(p: PropState, ctx: PropCtx): void {
+    const { yaw } = placement(p, ctx, tmp);
+    this.root.position.copy(tmp);
+    // On the roof it sits on the east slope of your gable (1.9 m rise over 6.4 m: ~0.29 rad).
+    const onRoof = p.state === 'roof' || p.state === 'scouted' || p.state === 'squirreled';
+    this.root.rotation.set(0, onRoof ? 0 : yaw, onRoof ? -0.29 : 0);
+    const eaten = p.state === 'squirreled';
+    this.whole.visible = !eaten;
+    this.eaten.visible = eaten;
+    this.squad.forEach((sq, i) => {
+      sq.visible = eaten || (p.state === 'scouted' && i === 0);
+      // Eating in shifts: they take turns bobbing in for a bite.
+      const bite = eaten && Math.floor(ctx.simT * 1.5) % this.squad.length === i;
+      sq.position.y = bite ? 0.06 + Math.abs(Math.sin(ctx.simT * 14)) * 0.04 : 0;
+      sq.scale.setScalar(p.state === 'scouted' ? 1.15 : 1);
+    });
+  }
+}
+
+/** Earl's ladder: flat in the garage, on your shoulder, or leaning on your house. */
+class LadderView implements PropView {
+  public readonly root: ENGINE.SceneNode;
+  private readonly ladder: ENGINE.MeshNode;
+  public constructor(world: ENGINE.World, public readonly id: string) {
+    this.root = ENGINE.SceneNode.create({ name: 'Prop:ladder' });
+    this.ladder = artNode(ladderGeometry(), 'Ladder');
+    this.root.add(this.ladder);
+    world.add(this.root);
+  }
+  public update(p: PropState, ctx: PropCtx): void {
+    const { yaw } = placement(p, ctx, tmp);
+    this.root.position.copy(tmp);
+    this.root.rotation.set(0, yaw, 0);
+    if (p.heldBy === 'player') {
+      // On the shoulder: runs from behind you to well out in front.
+      this.ladder.position.set(0.32, 0.35, -2.0);
+      this.ladder.rotation.set(Math.PI / 2, 0, 0);
+    } else if (p.state === 'leaning') {
+      // Feet on the lawn, top against the front wall (the house is toward −Z).
+      this.ladder.position.set(0, 0, 0);
+      this.ladder.rotation.set(-0.27, 0, 0);
+    } else {
+      this.ladder.position.set(0, 0.05, -1.7);
+      this.ladder.rotation.set(Math.PI / 2, 0, 0);
+    }
+  }
+}
+
+/** Linda's forms: a neat stack, a flurry of loose sheets in the wind, a mess in the coop. */
+class FormsView implements PropView {
+  public readonly root: ENGINE.SceneNode;
+  private readonly stack: ENGINE.MeshNode;
+  private readonly sheets: ENGINE.MeshNode[] = [];
+  public constructor(world: ENGINE.World, public readonly id: string) {
+    this.root = ENGINE.SceneNode.create({ name: 'Prop:forms' });
+    this.stack = artNode(formsGeometry(), 'Forms');
+    this.root.add(this.stack);
+    for (let i = 0; i < 5; i++) {
+      const sheet = artNode(sheetGeometry(), 'Sheet');
+      sheet.visible = false;
+      this.sheets.push(sheet);
+      this.root.add(sheet);
+    }
+    world.add(this.root);
+  }
+  public update(p: PropState, ctx: PropCtx): void {
+    const { yaw } = placement(p, ctx, tmp);
+    this.root.position.copy(tmp);
+    this.root.rotation.set(0, p.flight ? yaw * 0.3 : yaw, 0);
+    const flying = p.flight !== null;
+    const scattered = p.state === 'signed';
+    this.sheets.forEach((s, i) => {
+      s.visible = flying || scattered || (p.state === 'blowing' && p.heldBy === null);
+      const a = i * 1.26 + ctx.simT * (flying ? 3.2 : 0.6);
+      if (scattered) {
+        s.position.set(Math.cos(i * 1.9) * 0.7, 0.02, Math.sin(i * 1.9) * 0.6);
+        s.rotation.set(0, i * 0.8, 0);
+      } else {
+        const r = flying ? 0.6 + 0.15 * Math.sin(ctx.simT * 2 + i) : 0.45;
+        s.position.set(Math.cos(a) * r, flying ? 0.25 + Math.sin(ctx.simT * 5 + i * 2) * 0.3 : 0.02, Math.sin(a) * r);
+        s.rotation.set(flying ? Math.sin(ctx.simT * 9 + i) * 0.9 : 0, a, flying ? Math.cos(ctx.simT * 7 + i) * 0.7 : 0);
+      }
+    });
+  }
+}
+
 export function createPropViews(world: ENGINE.World): Map<string, PropView> {
   const views = new Map<string, PropView>();
   const add = (v: PropView) => views.set(v.id, v);
@@ -358,6 +467,9 @@ export function createPropViews(world: ENGINE.World): Map<string, PropView> {
   add(new CartView(world, 'cart'));
   add(new GateView(world, 'gate'));
   add(new MailboxView(world, 'mailbox'));
+  add(new CakeView(world, 'cake'));
+  add(new LadderView(world, 'ladder'));
+  add(new FormsView(world, 'forms'));
   add(
     new SimpleView(world, 'charcoal', (r) => {
       const b = new Batch();

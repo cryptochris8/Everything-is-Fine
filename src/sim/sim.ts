@@ -19,7 +19,7 @@ import {
 } from './comedy/scenario.js';
 import type { ActorAnim, Difficulty, IncidentDef, Lines, MoveStyle, TargetRef } from './comedy/types.js';
 import { ACTOR_BY_ID, CAST, STYLE_SPEED, actorName } from './content/cast.js';
-import { BOX_FINDS, PROPS, PROP_BY_ID, type PlaceTarget } from './content/props.js';
+import { BOX_FINDS, PROPS, PROP_BY_ID, type PlaceTarget, theProp, TheProp } from './content/props.js';
 import { Ledger, type FactValue } from './core/ledger.js';
 import { Rng } from './core/rng.js';
 import { add, dist, fromYaw, norm, stepToward, sub, yawOf, type Vec2 } from './core/vec.js';
@@ -63,6 +63,8 @@ export interface TraceEntry {
 }
 
 const INTERACT_RADIUS = 2.1;
+/** Props resting higher than this (on a roof) are out of reach from the ground. */
+export const REACH_HEIGHT = 2.2;
 const THROW_DISTANCE = 7.5;
 const DOG_TOY_RADIUS = 16;
 const CATCH_DOG_RADIUS = 1.7;
@@ -249,10 +251,10 @@ export class Sim {
       }
       for (const a of this.actors.values()) {
         if (a.visible && waiting.has(a.id) && dist(p.pos, a.pos) <= INTERACT_RADIUS + 0.6) {
-          return { kind: 'give', prop: held.id, actor: a.id, prompt: `Show the ${def.name} to ${actorName(a.id)}` };
+          return { kind: 'give', prop: held.id, actor: a.id, prompt: `Show ${theProp(def.name)} to ${actorName(a.id)}` };
         }
       }
-      return { kind: 'drop', prop: held.id, prompt: `Put down the ${def.name}` };
+      return { kind: 'drop', prop: held.id, prompt: `Put down ${theProp(def.name)}` };
     }
     let best: Interaction | null = null;
     let bestScore = Infinity;
@@ -271,14 +273,14 @@ export class Sim {
       const r = INTERACT_RADIUS + (ACTOR_BY_ID.get(a.id)?.size === 'large' ? 0.5 : 0);
       const loot = a.id === 'dog' ? this.dogLoot() : null;
       if (loot && d <= CATCH_DOG_RADIUS + 0.9) {
-        consider({ kind: 'talk', actor: a.id, prompt: `Grab the ${PROP_BY_ID.get(loot)!.name} from Brisket!`, highlight: true }, d, true);
+        consider({ kind: 'talk', actor: a.id, prompt: `Grab ${theProp(PROP_BY_ID.get(loot)!.name)} from Brisket!`, highlight: true }, d, true);
       } else if (d <= r) {
         const highlight = waiting.has(a.id);
         consider({ kind: 'talk', actor: a.id, prompt: ACTOR_BY_ID.get(a.id)?.verb ?? `Talk to ${a.id}`, highlight }, d, highlight);
       }
     }
     for (const pr of this.props.values()) {
-      if (pr.flight || (pr.heldBy && pr.heldBy !== 'player')) {
+      if (pr.flight || (pr.heldBy && pr.heldBy !== 'player') || (!pr.heldBy && pr.y > REACH_HEIGHT)) {
         continue;
       }
       const def = PROP_BY_ID.get(pr.id)!;
@@ -288,11 +290,11 @@ export class Sim {
       }
       const highlight = waiting.has(pr.id);
       if (def.carry) {
-        consider({ kind: 'pickup', prop: pr.id, prompt: `Pick up the ${def.name}`, highlight }, d, highlight);
+        consider({ kind: 'pickup', prop: pr.id, prompt: `Pick up ${theProp(def.name)}`, highlight }, d, highlight);
       } else {
         const use = def.use?.[pr.state];
         consider(
-          { kind: 'use', prop: pr.id, prompt: use ? use[0] : def.inspect ?? `Look at the ${def.name}`, next: use ? use[1] : null, highlight },
+          { kind: 'use', prop: pr.id, prompt: use ? use[0] : def.inspect ?? `Look at ${theProp(def.name)}`, next: use ? use[1] : null, highlight },
           d,
           highlight,
         );
@@ -397,7 +399,7 @@ export class Sim {
       this.caption(
         id === 'platter'
           ? 'You consider throwing the burgers. You decide to be a good neighbor.'
-          : `The ${def.name} is not built for flight. You have principles.`,
+          : `${TheProp(def.name)} is not built for flight. You have principles.`,
         2.6,
       );
       return false;
@@ -1132,7 +1134,7 @@ export class Sim {
         const def = PROP_BY_ID.get(p.id)!;
         p.pos = def.offset ? add(SPOTS[def.home], def.offset) : { ...SPOTS[def.home] };
         p.y = def.y;
-        this.caption(`The ${def.name} has been returned by a concerned citizen.`, 3);
+        this.caption(`${TheProp(def.name)} has been returned by a concerned citizen.`, 3);
         this.ledger.bump(this.t, 'props_returned', 1, 'systems');
       }
     }
@@ -1176,7 +1178,7 @@ export class Sim {
     this.emote('dog', 'gasp');
     const away = add(dog.pos, { x: (dog.pos.x - this.player.pos.x) * 2, z: (dog.pos.z - this.player.pos.z) * 2 });
     this.orderGoto('dog', away, 'run');
-    this.caption(`You tackle-hug Brisket. He surrenders the ${PROP_BY_ID.get(id)!.name}. Mostly.`, 3);
+    this.caption(`You tackle-hug Brisket. He surrenders ${theProp(PROP_BY_ID.get(id)!.name)}. Mostly.`, 3);
     this.emit({ type: 'sound', id: 'catch', at: { ...dog.pos } });
     return true;
   }
@@ -1192,7 +1194,7 @@ export class Sim {
           carried.y = 0;
           this.ledger.record(this.t, `dog_dropped.${carried.id}`, true, 'systems', { actor: 'dog', prop: carried.id });
           this.ledger.record(this.t, 'dog_distracted_by_toy', true, 'systems', { actor: 'dog' });
-          this.caption(`SQUEAK. Brisket drops the ${PROP_BY_ID.get(carried.id)!.name} instantly. Priorities.`, 3);
+          this.caption(`SQUEAK. Brisket drops ${theProp(PROP_BY_ID.get(carried.id)!.name)} instantly. Priorities.`, 3);
         } else {
           this.ledger.bump(this.t, 'fetch_games', 1, 'systems');
         }

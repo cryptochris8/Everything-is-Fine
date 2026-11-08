@@ -50,6 +50,8 @@ import { G, buildNeighborhood } from './Neighborhood.js';
 import { NeighborPawn } from './Player.js';
 import { createPropViews, type PropCtx, type PropView } from './PropViews.js';
 import { Sfx } from './Sfx.js';
+import { GameAudio } from './GameAudio.js';
+import { OPENING_THEME_SECONDS, distanceGain } from './audioPlan.js';
 
 type Phase = 'title' | 'playing' | 'paused' | 'news';
 type PadSnapshot = { id: string; buttons: boolean[]; values: number[]; axes: number[] };
@@ -64,6 +66,8 @@ export class Show {
   private hud: Hud | null = null;
   private fx: Fx | null = null;
   private readonly sfx = new Sfx();
+  /** Recorded music, effects and voices (ElevenLabs); Sfx is the synthesized fallback. */
+  private audio: GameAudio | null = null;
   private readonly store = new BrowserStore();
   private save: SaveData = freshSave();
   private saveBeforeDay: SaveData = freshSave();
@@ -123,6 +127,9 @@ export class Show {
     this.fx = new Fx(world);
     this.fx.reducedMotion = this.save.settings.reducedMotion;
     this.sfx.setVolume(this.save.settings.volume);
+    this.audio = new GameAudio(world);
+    this.audio.setVolume(this.save.settings.volume);
+    void this.audio.init();
 
     const host = world.gameContainer?.querySelector<HTMLElement>('#ui-container') ?? world.gameContainer ?? document.body;
     this.hud = new Hud(
@@ -204,12 +211,14 @@ export class Show {
   }
 
   private startDay(seed: number | null): void {
-    this.sfx.unlock();
+    this.unlockAudio();
     const s = seed ?? (this.phase === 'title' && this.sim && this.sim.t < 0.5 ? this.lastSeed : this.pickSeed());
     this.saveBeforeDay = structuredClone(this.save);
     this.sim = this.newSim(s);
     this.report = null;
     this.newsAt = null;
+    this.audio?.hush();
+    this.audio?.coldOpen();
     this.fx?.reset();
     this.hud?.closeOverlay();
     this.hud?.clearTransient();
@@ -243,7 +252,11 @@ export class Show {
     this.store.store(serializeSave(this.save));
     this.phase = 'news';
     this.pawn()?.setFrozen(true);
-    this.sfx.play('news');
+    if (this.audio) {
+      this.audio.startNews();
+    } else {
+      this.sfx.play('news');
+    }
     this.hud?.setObjective(null);
     this.hud?.setPrompt(null, null, false);
     this.hud?.showNews(report, this.save.day);
@@ -280,6 +293,7 @@ export class Show {
       this.playerYaw = Math.atan2(fwd.x, fwd.z);
     }
     this.pollGamepad();
+    this.audio?.update(Math.min(dt, 0.1), this.phase, sim.chaos, sim.running.some((r) => r.def.kind === 'finale'), sim.t < OPENING_THEME_SECONDS);
     const simDt = Math.min(dt, 0.1) * TIMESCALE;
     if (this.phase === 'playing') {
       if (this.bot) {
@@ -382,7 +396,9 @@ export class Show {
     switch (e.type) {
       case 'say':
         hud.say(e.actor, actorName(e.actor), e.text, e.dur);
-        this.sfx.play('talk');
+        if (!this.audio?.say(e.actor, e.text)) {
+          this.sfx.play('talk');
+        }
         break;
       case 'caption':
         hud.caption(escapeHtml(e.text), e.dur);
@@ -394,7 +410,7 @@ export class Show {
         this.fx?.burst(e.kind, e.at, e.y, e.r, e.dur);
         break;
       case 'sound':
-        this.sfx.play(e.id);
+        this.playSound(e.id, e.at);
         break;
       case 'objective':
         hud.setObjective(e.text, e.side);
@@ -405,22 +421,22 @@ export class Show {
       case 'stun':
         if (e.dur > 0) {
           this.pawn()?.stun(e.dur);
-          this.sfx.play(e.kind === 'slip' ? 'splash' : 'thud');
+          this.playSound(e.kind === 'slip' ? 'splash' : 'thud');
         }
         break;
       case 'bounce':
         this.pawn()?.bounce(e.power);
-        this.sfx.play('boing');
+        this.playSound('boing');
         break;
       case 'chaos':
         hud.setChaos(e.value, e.tier);
         break;
       case 'toast':
         hud.toast(e.text, e.kind);
-        this.sfx.play(e.kind === 'award' ? 'award' : e.kind === 'rule' ? 'rule' : 'chaos');
+        this.playSound(e.kind === 'award' ? 'award' : e.kind === 'rule' ? 'rule' : 'chaos');
         break;
       case 'propLanded':
-        this.sfx.play('thud');
+        this.playSound('thud');
         break;
       default:
         break;
@@ -461,7 +477,7 @@ export class Show {
         // Untrusted = our own synthetic Space from the touch JUMP button.
         return;
       }
-      this.sfx.unlock();
+      this.unlockAudio();
       this.setDevice('keyboard');
       if (e.code === 'Space' && this.phase === 'playing') {
         e.preventDefault();
@@ -478,7 +494,7 @@ export class Show {
     window.addEventListener('keydown', this.keyHandler);
     this.installDragLook();
     this.pointerHandler = (e: PointerEvent) => {
-      this.sfx.unlock();
+      this.unlockAudio();
       if (e.pointerType === 'touch') {
         this.setDevice('touch');
       } else if (e.pointerType === 'mouse') {
@@ -569,7 +585,7 @@ export class Show {
     const pressed = this.padEdges.update(pad.buttons);
     if (pressed.length || stickMagnitude(pad.axes, 0.35) > 0) {
       this.padStyle = padStyleFromId(pad.id);
-      this.sfx.unlock();
+      this.unlockAudio();
       this.setDevice('gamepad');
     }
     const choiceCount = this.sim?.choices?.options.length ?? 0;
@@ -750,6 +766,7 @@ export class Show {
     }
     this.save.settings = { ...this.save.settings, ...rest };
     this.sfx.setVolume(this.save.settings.volume);
+    this.audio?.setVolume(this.save.settings.volume);
     if (this.fx) {
       this.fx.reducedMotion = this.save.settings.reducedMotion;
     }
@@ -757,6 +774,22 @@ export class Show {
   }
 
   // ============================================================ helpers
+
+  private unlockAudio(): void {
+    this.sfx.unlock();
+    this.audio?.unlock();
+  }
+
+  /** A recorded effect if we have one (quieter from across the street), else the synthesized stinger. */
+  private playSound(id: string, at: { x: number; z: number } | null = null): void {
+    if (this.audio?.hasSfx(id)) {
+      const d = at ? Math.hypot(at.x - this.playerPos.x, at.z - this.playerPos.z) : null;
+      this.audio.playSfx(id, distanceGain(d));
+    } else {
+      this.sfx.play(id);
+    }
+  }
+
 
   private pawn(): NeighborPawn | null {
     const p = this.world?.getFirstPlayerPawn();
@@ -850,8 +883,13 @@ export class Show {
       chaos: (n: number) => this.sim?.addChaos(n, 'debug'),
       tp: (x: number, y: number, z: number) => this.pawn()?.teleport(x, y, z),
       report: () => this.report,
+      audio: () => this.audio?.debugState() ?? null,
       debug: (on = true) => this.hud?.setDebugVisible(on),
       look: () => ({ ...athleteInput.look, move: athleteInput.move, run: athleteInput.run }),
+      /** Aim the camera (probe framing): yaw 0 looks north (+Z), π looks south. */
+      setLook: (yaw: number, pitch?: number) => {
+        athleteInput.look = { yaw, pitch: pitch ?? athleteInput.look.pitch };
+      },
       sky: () => {
         const w = this.world;
         if (!w) {

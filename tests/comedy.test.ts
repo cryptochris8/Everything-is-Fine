@@ -342,7 +342,7 @@ test('systems: grabbing Brisket takes the loot back (interaction, not mere proxi
   assert.equal(sim.props.get('gnome')!.heldBy, 'dog', 'standing next to the dog must not auto-catch');
   const i = sim.interaction();
   assert.equal(i?.kind, 'talk');
-  assert.match(i!.prompt, /Grab the .* from Brisket/);
+  assert.match(i!.prompt, /Grab Sir Reginald \(garden gnome\) from Brisket/);
   sim.interact();
   assert.equal(sim.props.get('gnome')!.heldBy, null);
   assert.ok(sim.ledger.truthy('dog_caught'));

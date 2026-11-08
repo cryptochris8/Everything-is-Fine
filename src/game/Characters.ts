@@ -14,6 +14,7 @@ import type { ActorState } from '../sim/world/state.js';
 import { Batch, batchMaterial } from './Batch.js';
 import { isCastId } from './art/neighbors.js';
 import { modelMaterial } from './art/render/models/materials.js';
+import { admiralCatGeometry, robotVacuumGeometry } from './art/encounterModels.js';
 import { chickenGeometry, mowBotGeometry } from './art/yard.js';
 import { CastActor, DogActor } from './CastViews.js';
 import { G } from './Neighborhood.js';
@@ -458,6 +459,35 @@ class Chickens implements ActorView {
   }
 }
 
+/** Admiral Biscuit riding his robot vacuum. He never gets off; the vacuum does the walking. */
+class CatOnVacuum implements ActorView {
+  public readonly root: ENGINE.SceneNode;
+  private readonly cat: ENGINE.MeshNode;
+  private readonly vacuum: ENGINE.MeshNode;
+  public constructor(world: ENGINE.World, public readonly id: string) {
+    this.root = ENGINE.SceneNode.create({ name: 'Actor:cat' });
+    const mat = modelMaterial();
+    this.vacuum = ENGINE.MeshNode.create({ name: 'Vacuum', geometry: robotVacuumGeometry(), material: mat, castShadow: true, physicsOptions: { enabled: false } });
+    this.cat = ENGINE.MeshNode.create({ name: 'Cat', geometry: admiralCatGeometry(), material: mat, position: new THREE.Vector3(0, 0.1, 0), castShadow: true, physicsOptions: { enabled: false } });
+    this.root.add(this.vacuum);
+    this.root.add(this.cat);
+    world.add(this.root);
+  }
+  public headTop(out: THREE.Vector3): THREE.Vector3 {
+    return out.set(this.root.position.x, this.root.position.y + 1.1, this.root.position.z);
+  }
+  public update(a: ActorState, simT: number): void {
+    this.root.visible = a.visible;
+    this.root.position.set(a.pos.x, G + arcY(a, simT), a.pos.z);
+    this.root.rotation.set(0, a.yaw, 0);
+    const moving = a.order !== null;
+    // Under way: the vacuum hums and wobbles; the admiral leans into the turns, chin up.
+    this.vacuum.position.y = moving ? Math.abs(Math.sin(simT * 22)) * 0.012 : 0;
+    this.cat.rotation.set(moving ? -0.06 : 0, Math.sin(simT * (moving ? 1.6 : 0.4)) * (moving ? 0.25 : 0.12), moving ? Math.sin(simT * 3.1) * 0.05 : 0);
+    this.cat.position.y = 0.1 + (a.anim === 'sniff' ? Math.abs(Math.sin(simT * 2)) * 0.02 : 0);
+  }
+}
+
 export function createActorView(world: ENGINE.World, id: string): ActorView {
   if (id === 'dog') {
     return params.has('oldart') ? new Dog(world, id) : new DogActor(world, id);
@@ -470,6 +500,9 @@ export function createActorView(world: ENGINE.World, id: string): ActorView {
   }
   if (id === 'chickens') {
     return new Chickens(world, id);
+  }
+  if (id === 'cat') {
+    return new CatOnVacuum(world, id);
   }
   return new Humanoid(world, id, LOOKS[id] ?? LOOKS.todd!);
 }

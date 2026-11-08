@@ -76,6 +76,7 @@ Each record: decision, why, consequences. Newest at the bottom. Status: these ar
 ### ADR-010 — Synthesized audio first
 **Decision.** WebAudio stingers (`Sfx.ts`). Sound ids from content map to synth voices.
 **Why.** Original sound with zero licensing, and nothing to load. ElevenLabs SFX/VO can replace the voices later using the same ids.
+**Superseded in part by ADR-021 (2026-11-07):** recorded ElevenLabs audio now plays first; the synth voices remain the fallback for any id without a file (and for pickup/place/click/talk).
 
 ### ADR-011 — Persistence via localStorage with graceful fallback
 **Decision.** A versioned, validated `SaveData` (memory flags, affinity, HOA rules, awards, headline archive, settings, difficulty, stats) stored through `BrowserStore`, which falls back to memory.
@@ -159,6 +160,63 @@ The pause menu gained an "I'm stuck!" button for every device.
 - On the controller, X interacts and **Y** throws, because B now runs. L3 run and the touch RUN button are gone (full tilt runs).
 
 **Verified.** 13 maths tests and `tools/probe-input.cjs` (32/32 in headless Chrome): speeds measured 4.26 and 7.18 m/s, jump 1.21–1.26 m, camera-relative walking after a turn, right-drag turns exactly 0.8 rad per 100 px, no pointer lock, the floating stick runs at the rim, and a full bot day completes.
+
+### ADR-020 — Three more encounters, and props on roofs are out of reach (2026-11-07)
+**Decision.** Chris asked for three new encounters. They are the blueprint 05 seeds PET-01, PARTY-01 and HOA-02, written as data in `encounters.ts` with no new DSL verbs:
+- one new actor, Admiral Biscuit (`cat`, drawn riding his vacuum);
+- three new props: `cake`, `ladder` and `forms`;
+- two new spots: `playerRoof` (the east slope of your gable, measured against the bungalow roof) and `playerLadder`.
+
+Each one has a rule-of-three escalation and a player fix, plus a "let it happen" payoff that leaves a mark (a fact, a memory and an HOA rule).
+
+**One sim rule was added: `REACH_HEIGHT = 2.2` m.** A prop resting higher than that can't be picked up from the ground. Without it, the roof cake could be grabbed from the side yard (1.9 m away).
+
+**Prompt grammar:** props whose name starts with a capital (a name or a possessive) take no article. So the prompt reads "Pick up Earl's ladder", not "the Earl's ladder", and the old "the Sir Reginald" bug is fixed too (`theProp` / `TheProp`).
+
+### ADR-021 — Recorded audio: ElevenLabs baked at build time, played through the engine (2026-11-07)
+**Decision.** `tools/build-audio.mjs` and `tools/audio-catalog.mjs` follow the proven method of Fable-5.1-one-shot's `build-audio.mjs`. They render everything to MP3 once, at build time. Nothing calls ElevenLabs at runtime: no key in the game and no per-play cost. Files are kept, so re-runs only make what's missing.
+
+**What was generated:**
+- **Music:**
+  - `theme`: a 62 s sitcom theme song with sung lyrics, verified by transcription;
+  - `street`: a 90 s loop for walking around;
+  - `chaos`: a 45 s block-party loop.
+- **Sound effects:** 29 effects whose ids match the sim's `sound:` actions, plus a looping neighbourhood ambience.
+- **Voices:** 206 lines extracted from the content itself. Cast, all from library or stock voices with no clones of real people:
+
+| Character | Voice |
+|---|---|
+| Randy | Austin Knox |
+| Linda | Bella (professional) |
+| Earl | Dexter Glitch |
+| Granny | Carol |
+| Todd | Will |
+| Anchor Chet Mabry | Brian |
+
+**Playback (`GameAudio.ts`, with engine-free decisions in `audioPlan.ts`):**
+- Music beds and ambience are looping `SoundNode`s, crossfaded every frame.
+  - The theme plays on the title screen, over each day's first 30 s as a sitcom cold open, and after the anchor signs off.
+  - The street bed plays the rest of the day.
+  - At chaos ≥ 70, or during the Block Party, the chaos track takes over.
+- Effects and voices are `GlobalAudioManager` one-shots.
+- Voices are looked up by speaker plus the exact on-screen text, so editing a line un-voices it until a re-run. They play one at a time, drop anything that has waited more than 4 s, and duck the music to 45 %.
+- Distant effects are quieter (never below 30 %).
+- Everything starts only after the first key, click or tap (browser autoplay rules).
+
+**Studio:**
+- The build tool writes `src/game/audioManifest.ts`, with every path as a literal `@project/assets/audio/...` string.
+- All 238 were confirmed in the bundle.
+- Size: 3.1 MB music, 0.7 MB effects, 7.1 MB voices. Voices load on demand.
+
+**Cost (2026-11-07):** about 7,300 ElevenLabs credits (effects about 2,000, voices about 4,500; music used none from the character pool). 20,739 remain until the 18 Nov reset.
+
+**Verified in Chrome via `__eif.audio()`:**
+- The context is running.
+- The theme cold-opens at 0.55, ducks to 0.25 under dialogue, and hands over to the street bed by 33 s.
+- Chaos 80 switches to the chaos bed.
+- On the news card, the anchor's three lines play and then the theme returns at 0.75.
+
+**Not yet checked:** how it sounds through speakers (judged only by levels and a transcript), and inside a Studio build.
 
 ### ADR-016 — Art from our own code-built model kits
 **Decision.** The procedural primitive art (ADR-009) is replaced with code-built models ported from Chris's own games:
