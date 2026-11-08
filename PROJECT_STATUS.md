@@ -127,7 +127,7 @@ They also cover systems (toy, grab, sprinkler, valve chain), interactions, chaos
 - 6 free-roam encounters now (cat on a vacuum, cake on the roof and HOA forms in the wind added 2026-11-07).
 - Engine-18 spawn quirk is worked around (a teleport 1.5 s after spawn). During that first 1.5 s the player stands slightly sunk.
 - Two console 404s on boot that aren't game requests (the probe's network log shows 0 failed requests; probably the favicon).
-- First commit `4bea0ed` on `master` (2026-11-07, at Chris's request). No remote yet: Chris is creating the GitHub repo.
+- First commit `4bea0ed` on `master` (2026-11-07, at Chris's request). Remote `origin` = https://github.com/cryptochris8/Everything-is-Fine; `master` pushed 2026-11-08 (encounters + audio = `4a0b003`; MP3s via Git LFS).
 
 ## Next steps (in order)
 1. **Chris:** play it at http://127.0.0.1:5207/ (run `bash tools/check.sh --serve` first). Is it funny in 30 s? Which bits land?

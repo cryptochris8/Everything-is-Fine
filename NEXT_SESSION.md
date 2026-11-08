@@ -15,7 +15,7 @@
 
 What doesn't exist yet:
 - It has **not** been uploaded through Studio.
-- **First commit is `4bea0ed`** on `master` (2026-11-07). No remote yet.
+- **Pushed to GitHub:** https://github.com/cryptochris8/Everything-is-Fine (`origin`, branch `master`; audio MP3s go through Git LFS via `.gitattributes`). Encounters + audio are commit `4a0b003` (2026-11-08).
 
 ## First moves
 1. Start the server: `bash tools/check.sh --serve`, then go to http://127.0.0.1:5207/.
@@ -53,5 +53,4 @@ What doesn't exist yet:
 ## Open decisions for Chris
 - Title and branding clearance (not technical).
 - The player character's look: currently a teal-tee "new neighbor" from the Bad Hair Day kit. Should there be a customiser?
-- The GitHub repo Chris is creating: add it as `origin` and push `master` once he gives the URL.
 - Audio taste: how does the theme song land? Is the voice cast right? Should captions get a narrator, and should there be a separate music-volume slider?
