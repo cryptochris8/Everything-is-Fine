@@ -115,13 +115,16 @@
         "shadowCameraTop": 200,
         "shadowFar": 250,
         "userData": {
-          "objectFlags": 2
+          "objectFlags": 6
         },
         "uuid": "aed4ec2790ca7f87"
       },
       {
         "$bc": "ENGINE.PlayerStart",
         "$initOptions": {},
+        "children": {
+          "$length": 1
+        },
         "name": "Player Start",
         "nodeId": 52682,
         "position": {
@@ -131,6 +134,9 @@
             0.9,
             0
           ]
+        },
+        "userData": {
+          "objectFlags": 6
         },
         "uuid": "ed4ec2790ca7f877"
       },
@@ -173,7 +179,7 @@
         },
         "receiveShadow": true,
         "userData": {
-          "objectFlags": 2
+          "objectFlags": 6
         },
         "uuid": "d4ec2790ca7f877a",
         "uvScaleTilesPerUnit": 0.2
@@ -188,6 +194,9 @@
           "generateEnvironmentMap": true,
           "isRoot": true,
           "mieDirectionalG": 0.85
+        },
+        "children": {
+          "$length": 1
         },
         "cloudDensity": 0.7,
         "cloudElevation": 0.42,
@@ -205,12 +214,35 @@
           ]
         },
         "userData": {
-          "objectFlags": 2
+          "objectFlags": 6
         },
         "uuid": "4ec2790ca7f877ad"
       }
     ],
-    "editorData": {},
+    "editorData": {
+      "sceneTree": {
+        "children": [
+          {
+            "id": "aed4ec2790ca7f87",
+            "nodeType": "actor"
+          },
+          {
+            "id": "ed4ec2790ca7f877",
+            "nodeType": "actor"
+          },
+          {
+            "id": "d4ec2790ca7f877a",
+            "nodeType": "actor"
+          },
+          {
+            "id": "4ec2790ca7f877ad",
+            "nodeType": "actor"
+          }
+        ],
+        "id": "ec2790ca7f877ad3",
+        "nodeType": "scene"
+      }
+    },
     "gameModeClass": null,
     "postProcessConfiguration": {
       "effects": [

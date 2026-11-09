@@ -6,7 +6,7 @@ _Last verified 2026-11-07. Confirmed means checked against an installed tool, th
 - **Target platform:** **The Sandbox Studio**, the TypeScript/WebGPU engine codenamed **Genesys**, engine **18.0.0**.
   - Games are browser-playable links at `studio.sandbox.game/play/<uuid>`.
   - This is **not** the legacy Unity voxel *Game Maker*, which is also installed on this machine. That product is unrelated.
-- **Status:** the game builds and runs in Chrome (WebGPU, ~140 fps on the laptop's dGPU). A whole day was played end-to-end in the browser by the autopilot, with the news card and save working. **It has not been uploaded through Studio yet; that is the remaining platform step.**
+- **Status:** the game builds and runs in Chrome (WebGPU, ~140 fps on the laptop's dGPU). A whole day was played end-to-end in the browser by the autopilot, with the news card and save working. **Uploaded through Studio 2026-11-08** (unpublished draft): gameId `1260c06a-f9db-4f89-b8c8-4d1a9f9b54df`, play link https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df. Probed headless on the live link: engine v18.0.0 requested and loaded, day 1 runs, music/ambience playing, voice lines play and duck the music, all 238 MP3s served by the CDN, `localStorage` available.
 
 ## Confirmed facts
 | Area | Finding | Source |
@@ -19,7 +19,7 @@ _Last verified 2026-11-07. Confirmed means checked against an installed tool, th
 | Physics | Rapier. Static/kinematic/dynamic bodies. The `MeshNode` default collider is ConvexHull, so we pass BoundingBox explicitly. | ENGINE18_NOTES §3–4; https://studio-docs.sandbox.game/the-editor/what-physics-and-rapier-mean.md |
 | NPC navigation | `AIController` requires the Mover stack, and the navmesh is unverified. **We use sim-driven kinematic movement** (same as both shipped reference games). | ENGINE18_NOTES §10 |
 | UI | DOM inside `#ui-container` (z-index 1000, above the canvas) is supported. Our HUD is plain DOM. | ENGINE18_NOTES §6 |
-| Audio | **Works in dev (2026-11-07).** Looping `SoundNode`s (music beds, ambience) and `GlobalAudioManager.playGlobalSound` one-shots (effects, voices) load `@project/assets/audio/*.mp3`. `world.audioListener.context.resume()` from a gesture starts it. The synth stingers are now the fallback. Not yet checked inside a Studio build. | ADR-021; `src/game/GameAudio.ts` |
+| Audio | **Works in dev (2026-11-07).** Looping `SoundNode`s (music beds, ambience) and `GlobalAudioManager.playGlobalSound` one-shots (effects, voices) load `@project/assets/audio/*.mp3`. `world.audioListener.context.resume()` from a gesture starts it. The synth stingers are now the fallback. **Verified on the live Studio build 2026-11-08.** | ADR-021; `src/game/GameAudio.ts` |
 | Input | A window `keydown` listener works. Built-in WASD/Space/Q/Z are consumed by the controller. Mobile virtual joysticks are set explicitly (never `'auto'`). | ENGINE18_NOTES §2 |
 | Persistence | **The engine has no player-data/save API.** `window.localStorage` works on the local dev page. It is **unverified on the published play host**. | Sandbox memory `sandbox-studio-tech-constraints`; `__eif.stats().storage === true` locally |
 | Multiplayer | Netcode exists but there is no hosting for published links. Out of scope; the game is single-player. | Sandbox memory `sandbox-studio-build-surface` |
@@ -52,7 +52,7 @@ _Last verified 2026-11-07. Confirmed means checked against an installed tool, th
 - **Session-first persistence.** A day is self-contained. Memory between days goes through `BrowserStore` (localStorage when available, otherwise in-memory) and never crashes on a blocked or corrupt store.
 
 ## Unverified / blockers
-- [ ] **Studio upload + live play link.** Needs Chris to open Studio on this folder.
+- [x] **Studio upload + live play link** (2026-11-08): https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df. How it went: the project was registered in `%APPDATA%\Sandbox-Studio\genesys-config.json` (Studio ignores a project path on its command line), Chris clicked it open, Build, cloud icon. Studio stamped the gameId into the project file (committed, so re-uploads hit the same game), rewrote `CLAUDE.md` to an SDK block (our text restored below it), `.npmignore`, and editor metadata in the scene. `src/auto-imports.ts` must exist (tools/gen-auto-imports.mjs). Live-page 404 for `.genesys/baked-assets.json` and the analytics failures are normal.
   - Decline any engine update prompt.
   - Run the version-triple check: `EverythingIsFine.genesys-project`, `.dist/EverythingIsFine.genesys-project` and `node_modules/@gnsx/genesys.js` must all read 18.0.0.
   - Click Build, upload, then probe the live link.

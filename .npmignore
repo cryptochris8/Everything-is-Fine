@@ -28,33 +28,17 @@
 
 # ============================================
 # Add your custom gitignore patterns below
-# These will be preserved during SDK updates
 # ============================================
 
-
-# THE LAST HAYRIDE
-.vite.log
+# EVERYTHING IS FINE!
+node_modules
 .dist/
 dist/
-tools/_out/
-tools/_audio-raw/
-tools/_audio-raw/
-.vite.old.log
+.env
+.env.local
+*.log
+.DS_Store
 .vite.started
-
-# derived cover conversions (see DEVLOG 2026-09-10) — .gitattributes sends png/jpg to LFS
-submission/outgrown-cover.jpg
-submission/outgrown-cover.png
-submission/cover-refs/
-
-# trailer renders (a master is ~97 MB)
-trailer/out/
-
-# trailer render intermediates (cinema shots, frame dumps) -- .gitattributes sends
-# mp4/webm/png/jpg through LFS, so these must never be staged
-tools/cinema/_out/
-tools/cinema/_frames/
 tools/_out/
-dist/
-tools/_meshy/
-tools/_narrator/
+tools/_audio-raw/
+Everything_Is_Fine_Claude_Code_Blueprint.zip

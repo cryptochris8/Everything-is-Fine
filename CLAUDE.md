@@ -1,3 +1,9 @@
+# GENESYS-SDK-BEGIN
+@AGENTS.md
+# GENESYS-SDK-END
+
+# Add your custom Claude instructions below.
+
 # Everything-is-Fine!
 
 **The Sandbox Studio game** (Genesys engine 18.0.0, TypeScript). AppalachAI Studios. A procedural comedy neighborhood: *Good neighbors. Bad decisions. Endless possibilities.*

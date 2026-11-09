@@ -21,7 +21,7 @@ _Updated 2026-11-07 (session 1)._
 - original cart, Mow-Bot, grill, workshop and chickens;
 - toon sky.
 
-Screenshots are in `tools/_out/dress_*.png`, `close_a.png` and `artday_*.png`. Controller and touch are done (ADR-015). **Audio done** (ADR-021): theme song, music beds, 29 effects and 206 voiced lines. Three more encounters (ADR-020). The Studio upload is still to do. |
+Screenshots are in `tools/_out/dress_*.png`, `close_a.png` and `artday_*.png`. Controller and touch are done (ADR-015). **Audio done** (ADR-021): theme song, music beds, 29 effects and 206 voiced lines. Three more encounters (ADR-020). **Uploaded to Studio 2026-11-08** as an unpublished draft: https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df (gameId committed). |
 
 ## How to run
 Use Bash from the project root.
@@ -131,7 +131,7 @@ They also cover systems (toy, grab, sprinkler, valve chain), interactions, chaos
 
 ## Next steps (in order)
 1. **Chris:** play it at http://127.0.0.1:5207/ (run `bash tools/check.sh --serve` first). Is it funny in 30 s? Which bits land?
-2. Studio upload pass: open Studio on this folder, decline the engine bump, run the version-triple check, Build, upload, probe the draft link, test localStorage on the host.
+2. Re-upload after changes: open Studio on this folder (decline any engine bump), `tools/studio-check.ps1`, Build, `tools/studio-check.ps1` again, cloud icon, then probe the play link. Still to do: Publish + thumbnail (Chris), real phone + controller on the live link, check a reload keeps the day counter on the host.
 3. Comedy depth: foil-twists (rule of three) on the BBQ complications; a camp-stove complication; ECHO-01. (The three encounters were done 2026-11-07.)
 4. Second mission: GOLF-01 package delivery with Granny.
 5. Presentation:

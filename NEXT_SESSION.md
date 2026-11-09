@@ -14,7 +14,7 @@
 - **Verification:** an autopilot played a full day in the browser (screenshots in `tools/_out/`).
 
 What doesn't exist yet:
-- It has **not** been uploaded through Studio.
+- It **is uploaded** to Studio as an unpublished draft (2026-11-08): https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df. Not yet published; no thumbnail; not yet tried on a real phone.
 - **Pushed to GitHub:** https://github.com/cryptochris8/Everything-is-Fine (`origin`, branch `master`; audio MP3s go through Git LFS via `.gitattributes`). Encounters + audio are commit `4a0b003` (2026-11-08).
 
 ## First moves
