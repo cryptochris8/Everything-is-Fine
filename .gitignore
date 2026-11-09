@@ -42,3 +42,6 @@ dist/
 tools/_out/
 tools/_audio-raw/
 Everything_Is_Fine_Claude_Code_Blueprint.zip
+
+# Cover reference screenshots (regenerated; not shipped)
+submission/cover-refs/
