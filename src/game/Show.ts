@@ -131,7 +131,9 @@ export class Show {
     this.audio.setVolume(this.save.settings.volume);
     void this.audio.init();
 
-    const host = world.gameContainer?.querySelector<HTMLElement>('#ui-container') ?? world.gameContainer ?? document.body;
+    const container = world.gameContainer;
+    if (!container) throw new Error('Show needs a rendered world: gameContainer is undefined (headless)');
+    const host = container.querySelector<HTMLElement>('#ui-container') ?? container;
     this.hud = new Hud(
       host,
       {

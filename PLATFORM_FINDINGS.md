@@ -3,7 +3,7 @@
 _Last verified 2026-11-07. Confirmed means checked against an installed tool, the engine source, a running build, or official docs. The engine changes often, so re-verify after any engine update._
 
 ## Summary
-- **Target platform:** **The Sandbox Studio**, the TypeScript/WebGPU engine codenamed **Genesys**, engine **18.0.0**.
+- **Target platform:** **The Sandbox Studio**, the TypeScript/WebGPU engine codenamed **Genesys**, engine **19.0.1** (upgraded from 18.0.0 on 2026-11-10, when the platform began requiring 19; Studio 19 needs Node ≥ 24.22.1).
   - Games are browser-playable links at `studio.sandbox.game/play/<uuid>`.
   - This is **not** the legacy Unity voxel *Game Maker*, which is also installed on this machine. That product is unrelated.
 - **Status:** the game builds and runs in Chrome (WebGPU, ~140 fps on the laptop's dGPU). A whole day was played end-to-end in the browser by the autopilot, with the news card and save working. **Uploaded through Studio 2026-11-08** (unpublished draft): gameId `1260c06a-f9db-4f89-b8c8-4d1a9f9b54df`, play link https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df. Probed headless on the live link: engine v18.0.0 requested and loaded, day 1 runs, music/ambience playing, voice lines play and duck the music, all 238 MP3s served by the CDN, `localStorage` available.
@@ -12,7 +12,7 @@ _Last verified 2026-11-07. Confirmed means checked against an installed tool, th
 | Area | Finding | Source |
 |---|---|---|
 | Studio install | `C:\Program Files\Sandbox-Studio` (live channel, updater `studio.sandbox.game/api/sdk/releases/live/`) and `C:\Program Files\Sandbox-Studio-Staging` | local filesystem |
-| Engine | `@gnsx/genesys.js` **18.0.0**, installed offline from the local pnpm store. It is not on public npm. | `node_modules/@gnsx/genesys.js/package.json` |
+| Engine | `@gnsx/genesys.js` **19.0.1** (18.0.0 until 2026-11-10), installed by Studio when it opens the project. It is not on public npm. | `node_modules/@gnsx/genesys.js/package.json` |
 | Language / build | TypeScript, Vite, pnpm. Entry is `src/game.ts` → `main()`. The runtime loads `.dist/game.js` as a CJS bundle in which only `@gnsx/genesys.js`, `three`, `three/tsl` and `three/webgpu` are external. | `scripts/build-dist.mjs`; Sandbox/last-hayride (shipped engine-18 game) |
 | Project template | The official "3rd Person Movement" template = `CharacterPawn` + `GameMode` + scene with light/ground/PlayerStart/Sky. Our project starts from it. | `C:\Program Files\Sandbox-Studio\resources\vendor\src\templates\src\templates\thirdPerson` |
 | Player movement | `CharacterPawn` uses `CharacterMovementNode`, not the Mover stack. Defaults: 5 m/s, no sprint, mouse look **only while the pointer is locked**. | `docs/ENGINE18_NOTES.md` §1 (file:line citations) |
@@ -53,8 +53,8 @@ _Last verified 2026-11-07. Confirmed means checked against an installed tool, th
 
 ## Unverified / blockers
 - [x] **Studio upload + live play link** (2026-11-08): https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df. How it went: the project was registered in `%APPDATA%\Sandbox-Studio\genesys-config.json` (Studio ignores a project path on its command line), Chris clicked it open, Build, cloud icon. Studio stamped the gameId into the project file (committed, so re-uploads hit the same game), rewrote `CLAUDE.md` to an SDK block (our text restored below it), `.npmignore`, and editor metadata in the scene. `src/auto-imports.ts` must exist (tools/gen-auto-imports.mjs). Live-page 404 for `.genesys/baked-assets.json` and the analytics failures are normal.
-  - Decline any engine update prompt.
-  - Run the version-triple check: `EverythingIsFine.genesys-project`, `.dist/EverythingIsFine.genesys-project` and `node_modules/@gnsx/genesys.js` must all read 18.0.0.
+  - Engine 19 (2026-11-10): the 18→19 guide (`.agents/skills/engine-upgrades/references/18-19.md`) needed no code changes here; our jumpSpeed is explicit, the pawn is a root, no removed APIs used. Studio 19 sorts `src/auto-imports.ts` by whole path (`game-data.ts` before `game/`); `tools/gen-auto-imports.mjs` matches it. The published play page hosts the game in a cross-origin iframe.
+  - Run the version-triple check: `EverythingIsFine.genesys-project`, `.dist/EverythingIsFine.genesys-project` and `node_modules/@gnsx/genesys.js` must all read the same version (19.0.1 now).
   - Click Build, upload, then probe the live link.
 - [ ] **Does localStorage persist on the published play page?** Test it on the draft link with `__eif.stats().storage`, then reload and check that the day counter advanced.
 - [ ] **Does Studio's own build pick up everything?**

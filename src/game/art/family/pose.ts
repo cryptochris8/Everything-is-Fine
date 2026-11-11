@@ -53,9 +53,7 @@ DEFAULTS[idx('pRf')] = -0.4;
 const WRAP = new Uint8Array(N);
 WRAP[idx('by')] = 1;
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export interface Pose extends Record<Channel, number> {}
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class Pose {
   readonly v = new Float64Array(N);
   constructor() {

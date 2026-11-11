@@ -18,6 +18,8 @@ import sdkConfig from './.genesys/sdk/eslint.config.js';
  */
 export default [
   ...sdkConfig,
+  // tests/ and tools/ are Node-only (run with tsx), outside tsconfig's src/, so the typed rules cannot parse them.
+  { ignores: ['tests/**', 'tools/**'] },
   // Add your custom overrides below:
   // {
   //   rules: {

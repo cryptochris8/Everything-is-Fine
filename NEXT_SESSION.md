@@ -3,7 +3,7 @@
 **Read first:** this file → PROJECT_STATUS.md → COMEDY_SYSTEM_STATUS.md → ARCHITECTURE_DECISIONS.md → PLATFORM_FINDINGS.md → `docs/ENGINE18_NOTES.md` (only the sections you need). The blueprint is in `Everything_Is_Fine_Blueprint/` (00–10).
 
 ## State in one paragraph
-*Everything Is Fine!* is a Sandbox Studio (Genesys engine 18.0.0) game, built and verified without the editor. Here is what works:
+*Everything Is Fine!* is a Sandbox Studio (Genesys engine 19.0.1, upgraded 2026-11-10) game, built and verified without the editor. Here is what works:
 - **Platform and build:** the build runs in Chrome. 55/55 tests pass. Content validates clean.
 - **Controls and camera are Athlete Domains' exactly** (ADR-019): camera-relative walk/run/jump, a drag-to-look orbit camera with no pointer lock, the floating phone stick, the same controller layout. The game's own actions are Enter (interact), T (throw), 1–3 (replies); on the controller, X and Y. `node tools/probe-input.cjs` checks 32 behaviours. Not yet tried on a real controller or phone.
 - **Art (2026-11-07):** code-built models ported from Bad Hair Day (skinned cast and the player, Brisket) and Trash Panda (houses, props, trees, fences, cars), plus originals (cart, Mow-Bot, grill, workshop, chickens) and a Skybox-library toon sky. See `docs/ART_SOURCES.md`, ADR-016–018. `?oldart=1` gives the old look and `?gallery=1` a model line-up.
@@ -14,7 +14,7 @@
 - **Verification:** an autopilot played a full day in the browser (screenshots in `tools/_out/`).
 
 What doesn't exist yet:
-- It **is uploaded** to Studio as an unpublished draft (2026-11-08): https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df. Not yet published; no thumbnail; not yet tried on a real phone.
+- It is **PUBLISHED** (2026-11-10, engine 19.0.1, with cover art from `submission/cover/`): https://studio.sandbox.game/play/1260c06a-f9db-4f89-b8c8-4d1a9f9b54df. Live-probed on 19: game ready, day 1 runs, HUD/cast/sky render, storage available. The play page now runs the game in a cross-origin iframe (`*.playsandbox-prod.download`), so probes must look in `page.frames()`, not the top window. Uploaded 2026-11-08 as a draft; not yet tried on a real phone.
 - **Pushed to GitHub:** https://github.com/cryptochris8/Everything-is-Fine (`origin`, branch `master`; audio MP3s go through Git LFS via `.gitattributes`). Encounters + audio are commit `4a0b003` (2026-11-08).
 
 ## First moves
@@ -44,7 +44,7 @@ What doesn't exist yet:
   - Don't map game actions onto them.
 - **Jumping:** take off only when grounded and not rising, because the engine's coyote time over-jumps.
 - **Player-facing text** must not name keys ("press 1 or 2"). The HUD labels buttons per device.
-- **Engine install.** `@gnsx/genesys.js@18.0.0` is not on public npm. Always use `pnpm install --offline` with pnpm 11 (command in PROJECT_STATUS).
+- **Engine install.** `@gnsx/genesys.js@19.0.1` is not on public npm (Studio installs it when it opens the project). Studio 19 needs Node ≥ 24.22.1 (installed 2026-11-10). Always use `pnpm install --offline` with pnpm 11 (command in PROJECT_STATUS).
 - **Content changes:** add data to `src/sim/content/**`, register it in `content/index.ts`, and run the tests. The validator catches bad refs, missing timeouts and non-fact news.
 - **New verbs:** extend the `Cond`/`Action` unions in `types.ts`, then `evalCond`/`runAction` in `scenario.ts`, then `validate.ts`.
 - **Determinism.** Never use `Math.random()` in `src/sim`. Use `sim.rngRolls`, `rngLines`, `rngDirector` or `rngWorld`.

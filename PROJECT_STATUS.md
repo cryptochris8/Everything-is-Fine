@@ -1,6 +1,6 @@
 # PROJECT_STATUS — Everything Is Fine!
 
-**AppalachAI Studios · The Sandbox Studio (Genesys engine 18.0.0) · procedural comedy neighborhood**
+**AppalachAI Studios · The Sandbox Studio (Genesys engine 19.0.1) · procedural comedy neighborhood**
 _Updated 2026-11-07 (session 1)._
 
 ## Where we are
@@ -131,7 +131,7 @@ They also cover systems (toy, grab, sprinkler, valve chain), interactions, chaos
 
 ## Next steps (in order)
 1. **Chris:** play it at http://127.0.0.1:5207/ (run `bash tools/check.sh --serve` first). Is it funny in 30 s? Which bits land?
-2. Re-upload after changes: open Studio on this folder (decline any engine bump), `tools/studio-check.ps1`, Build, `tools/studio-check.ps1` again, cloud icon, then probe the play link. Still to do: Publish + thumbnail (Chris), real phone + controller on the live link, check a reload keeps the day counter on the host.
+2. Re-upload after changes: open Studio on this folder (accept bumps within 19.x, then run the engine-upgrades guide), `tools/studio-check.ps1`, Build, `tools/studio-check.ps1` again, cloud icon, then probe the play link. Still to do: Publish + thumbnail (Chris), real phone + controller on the live link, check a reload keeps the day counter on the host.
 3. Comedy depth: foil-twists (rule of three) on the BBQ complications; a camp-stove complication; ECHO-01. (The three encounters were done 2026-11-07.)
 4. Second mission: GOLF-01 package delivery with Granny.
 5. Presentation:
