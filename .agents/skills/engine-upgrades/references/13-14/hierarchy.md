@@ -11,7 +11,8 @@ transform, lifecycle, physics, tag, and child root. Its deprecated
 not a nested-body lookup, unless you intentionally want a named child.
 
 `ActorOptions.rootComponent` and `sceneComponents` still load as compatibility
-options, but new and rewritten call sites must drop them. Prefer
+options in 14 (engine 19 removed them; see `18-19.md` sections 12 and 13), but
+new and rewritten call sites must drop them. Prefer
 `SceneNodeOptions.children` or `this.add(...)` in `initialize`.
 
 Do not add `isRoot: true` to existing Actor subclasses: every Actor is already a
@@ -81,34 +82,9 @@ Keep physics on that same node. Do not introduce
 `PrimitiveNode.create({ children: [onlyChild] })` when the Actor had nothing
 else. Same rule for a lone `ModelMeshNode`, `SoundNode`, etc.
 
-For shells that already exist in saved scenes rather than in `create()` calls,
-`ENGINE.collapseSingleChildShells(world, shellClasses)` performs exactly this
-promote-don't-wrap cleanup across a loaded World:
-
-```ts
-const promoted = ENGINE.collapseSingleChildShells(world, [ENGINE.Actor, ENGINE.ModelMeshActor]);
-```
-
-It preserves the child's world transform, keeps the shell's name and sibling slot,
-and merges the shell's physics onto the child when both are `PrimitiveNode`s (shell
-fields win, `contributeToParentCollider` cleared). Promoted children inherit the
-shell's `ScenePlaced` flag and have `DefaultSubObject` cleared, so they survive a
-re-save as real scene roots. It returns the promoted children in collapse order.
-
-Two matching rules decide what actually collapses:
-
-- `shellClasses` is matched by exact constructor identity, not `instanceof`. A
-  gameplay subclass such as `class EnemySpawnPointActor extends ENGINE.Actor` is
-  deliberately left alone — passing `ENGINE.Actor` will not collapse it. To strip a
-  subclass shell, pass that subclass itself.
-- Only authored children count. Transient `Object3D` children (editor icon
-  billboards and similar helpers) are ignored, so a shell carrying an editor gizmo
-  still qualifies as single-child.
-
-Run it once against a loaded level and re-save the scene rather than calling it every
-`beginPlay` — it mutates the scene graph in place. Shells with zero authored children
-or more than one are left alone, so inspect the returned list and remove any remaining
-empty wrappers by hand.
+In engine 14 to 18, `ENGINE.collapseSingleChildShells(world, shellClasses)` collapsed
+shells that already existed in saved scenes. Engine 19 removed it, along with
+`Actor` and `ModelMeshActor`. Promote single children by hand and re-save the scene.
 
 ### Compound placeable — flat children + physics lift
 
@@ -238,7 +214,8 @@ Audit call sites that assumed these were Actors:
 - `getActor()` (returns null when the root is not an `Actor` — use
   `getRoot()`);
 - Actor-only net helpers (`replicateTransform`, `netLocalRole`,
-  `setAutonomousProxy`, …) — use `getReplicationGroup()` instead.
+  `setAutonomousProxy`, …) — use `getReplicationGroup()` instead
+  (superseded in 14.1.0 by `getReplicationInfo()`, [14.x](../14.x.md) §2).
 
 `hasAuthority()` without a replication group is `true` on Actor but `false` on
 `SceneNode`. Unreplicated Controllers / GameModes / InfoNodes that relied on
@@ -262,6 +239,8 @@ does not move remote instances.
 
 ### ReplicationGroup on non-Actor roots
 
+> **Superseded in 14.1.0.** `ReplicationGroup`, `ensureReplicationGroup`, and `getReplicationGroup()` were removed. If the target version is 14.1.0 or later, skip this and use `isRoot = true` + `replicated = true` (auto-creates `ReplicationInfo`) and `getReplicationInfo()` ([14.x](../14.x.md) §2).
+
 Setting `replicated = true` auto-adds a `ReplicationGroup` on Actor (setter
 / `beginPlay`) and on Pawn (`initialize` when `replicated`). Custom
 `SceneNode` / `PrimitiveNode` roots (Controllers, InfoNode subclasses, and
@@ -278,6 +257,8 @@ that set `replicated = true` without `ensureReplicationGroup` will not register
 as net entities.
 
 ### Multiplayer hard renames (no aliases)
+
+> **Superseded later.** The `Group*` names below were renamed `Entity*` in 14.1.0 ([14.x](../14.x.md) §3), and in 16 the single packet split into four packet/ack pairs and `EntityUpdateType` / `EntityAckType` / `EntityUpdate` / `EntityAck` were removed ([15-16](../15-16.md) §12). `NetWorld.clearGroups` is `clearEntities()` in 18. Migrate straight to the target version's names.
 
 If game code touches net packets, custom NetWorld helpers, map load RPCs, or
 replicated property metadata:
@@ -497,7 +478,7 @@ World uses a different verb order:
 `detachRootsPreservingAcrossLevelTransition()`. The Actor-only
 `detachActorsPreservingAcrossLevelTransition()` is gone with no shim.
 
-Rename `OpenLevelOptions.preserveActors` to `preserveRoots`.
+Rename `OpenLevelOptions.preserveActors` to `preserveRoots`. (Superseded in 16: `preserveRoots` and the `*Roots*` preserve hooks were removed and `openLevel` is always a cold load — [15-16](../15-16.md) §10. Targeting 16+, delete the option instead.)
 
 ### Other removed `World` members
 

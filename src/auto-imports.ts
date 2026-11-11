@@ -1,3 +1,4 @@
+import './game-data.js';
 import './game/art/animMap.js';
 import './game/art/core/rng.js';
 import './game/art/encounterModels.js';
@@ -63,7 +64,6 @@ import './game/PropViews.js';
 import './game/Sfx.js';
 import './game/ShippedAssets.js';
 import './game/Show.js';
-import './game-data.js';
 import './sim/comedy/director.js';
 import './sim/comedy/scenario.js';
 import './sim/comedy/types.js';

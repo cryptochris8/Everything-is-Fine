@@ -28,11 +28,12 @@
 | `outlinePath` | Root-to-node sibling index path |
 | `outlineOrder` | Contiguous 0..N-1 sync order |
 | `group` / `groupId` | Display group (usually mirrored parent) |
-| `position` / `rotation` / `scale` | Genesys **world** transform |
+| `position` / `rotation` / `scale` | Genesys **world** transform; rotation is three.js Euler `'XYZ'` in radians |
 | `parentTransform` | Parent Genesys world transform or `null` |
 | `visible` | Visibility hint |
 | `modelUrl` | `@project` / `@engine` GLB for ModelMeshNode |
 | `geometry` / `material` | Three.js JSON for MeshNode |
+| `unsupportedReason` | Set when the model URL or geometry could not be read; Blender shows a placeholder |
 
 ### Invariants
 
@@ -50,20 +51,23 @@
   "total": 129,
   "offset": 0,
   "count": 40,
+  "nextOffset": 40,
+  "done": false,
   "inventoryHash": "...",
+  "skippedCount": 3,
+  "skippedByBlockingClass": {},
   "records": []
 }
 ```
 
-MCP transfer wrapper:
+This is the `run_script` response, saved as
+`.scratch/blender-bridge/chunks/chunk-<offset>.json`. Plain JSON: the
+`run_script` sandbox has no `CompressionStream`.
 
-```json
-{
-  "format": "genesys-blender-bridge-chunk-compressed",
-  "encoding": "gzip+base64",
-  "payload": "..."
-}
-```
+`count` can be smaller than requested: the body halves its records until the
+chunk's JSON is ≤ 150,000 bytes. Continue at `nextOffset` until `done`. A
+response carrying `_meta` was cut by the MCP response limit; the merge refuses
+it.
 
 Merge via `merge_manifest_chunks.py` as part of
 [sync-from-genesys.md](sync-from-genesys.md).
@@ -78,9 +82,13 @@ Merge via `merge_manifest_chunks.py` as part of
   "changes": [],
   "additions": [],
   "unsupported": [],
-  "missingBaselineIds": []
+  "missingBaselineIds": [],
+  "repairedDuplicates": []
 }
 ```
+
+`make_bridge_scripts.py apply` splits it into batches; each embedded batch
+also carries `"batch": "02/05"`.
 
 ### `changes[]` (`updateTransform`)
 
@@ -107,5 +115,9 @@ array embedded beside the delta in `apply_genesys_delta.js`.
 
 | Quantity | Epsilon |
 | --- | --- |
-| Position / scale | `1e-5` |
+| Position / scale (largest per-axis difference in Python, vector distance in the apply script) | `max(1e-4, 1e-6 · abs(largest component))` |
 | Rotation (quaternion angle) | `1e-3` rad |
+
+MCP returns rounded decimals and Blender stores float32, so the old fixed
+`1e-5` sat inside the noise. The same rule decides "changed", "conflict",
+"already applied" and post-apply verification.

@@ -46,8 +46,8 @@ Field rules (full schema is in `@gnsx/genesys.sdk` `asset-pack-types.ts`):
 - `dependencies.packs` — semver ranges keyed by pack `id`.
 - `dependencies.node.{dependencies,devDependencies}` — merged into the host
   project's `package.json` on install (existing pins always win).
-- `contents` — optional counts of `prefabs`, `scripts`, `assets`. Populated
-  by the build pipeline on ship; do not author or update it by hand.
+- `contents` — optional file counts per extension, written by `export-pack`;
+  do not author or update it by hand.
 
 
 

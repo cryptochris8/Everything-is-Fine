@@ -3,43 +3,45 @@
     "build": "pnpm run generate-property-metadata && pnpm exec tsx ./scripts/genesys/sync-packs-tsconfig.ts && tsc && pnpm exec tsx ./scripts/genesys/write-build-stamp.ts",
     "turbo:build": "turbo run build",
     "generate-property-metadata": "pnpm exec tsx node_modules/@gnsx/genesys.js/scripts/generate-property-metadata.ts src/game-data.ts",
-    "preinstall": "node -e \"try{require('child_process').execSync('pnpm remove @gnsx/genesys.harness',{stdio:'pipe'})}catch(e){}\"",
+    "preinstall": "node -e \"try{const p=require('fs').readFileSync('package.json','utf8');if(p.includes('@gnsx/genesys.harness'))require('child_process').execSync('pnpm remove @gnsx/genesys.harness',{stdio:'pipe'})}catch(e){}\"",
     "postinstall": "pnpm exec tsx ./scripts/genesys/post-install.ts",
     "lint": "eslint . --fix --ext .ts,.tsx",
-    "remove-engine-comments": "pnpm exec tsx ./scripts/genesys/remove-engine-comments.ts",
     "dev": "pnpm exec tsx ./scripts/genesys/dev/generate-manifest.ts && vite",
     "check-pack-isolation": "pnpm exec tsx ./scripts/genesys/check-pack-isolation.ts",
     "export-pack": "pnpm exec tsx ./scripts/genesys/export-pack.ts",
-    "install-developer-skills": "pnpm exec tsx ./scripts/genesys/install-developer-skills.ts"
+    "install-developer-skills": "pnpm exec tsx ./scripts/genesys/install-developer-skills.ts",
+    "test": "pnpm exec tsx ./scripts/genesys/run-tests.ts"
   },
   "packageManager": "pnpm@12.6.0",
   "type": "module",
   "dependencies": {
-    "three": "npm:@gnsx/three@0.186.8",
-    "@gnsx/genesys.js": "18.0.0"
+    "three": "npm:@gnsx/three@0.187.5",
+    "@gnsx/genesys.js": "19.0.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": []
   },
   "devDependencies": {
     "@types/node": "25.9.3",
-    "@types/three": "npm:@gnsx/three-types@0.186.3",
-    "@typescript-eslint/parser": "8.66.0",
-    "@typescript-eslint/utils": "8.66.0",
-    "@typescript-eslint/eslint-plugin": "8.66.0",
+    "@types/three": "npm:@gnsx/three-types@0.187.3",
+    "@typescript-eslint/parser": "8.71.2",
+    "@typescript-eslint/utils": "8.71.2",
+    "@typescript-eslint/eslint-plugin": "8.71.2",
     "adm-zip": "0.5.17",
     "ajv": "8.20.0",
     "esbuild": "0.28.2",
     "eslint": "9.39.4",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-unused-imports": "4.4.1",
-    "tsx": "4.23.7",
-    "turbo": "2.11.4",
+    "tsx": "4.23.15",
+    "turbo": "2.11.9",
     "typescript": "6.0.3",
-    "vite": "8.2.1",
+    "vite": "8.3.4",
     "vite-plugin-mkcert": "2.1.0",
     "vite-plugin-node-polyfills": "0.28.0",
-    "@types/adm-zip": "0.5.8"
+    "@types/adm-zip": "0.5.8",
+    "qunit": "2.26.0",
+    "@types/qunit": "2.19.14"
   },
   "name": "EverythingIsFine",
   "version": "0.0.1"

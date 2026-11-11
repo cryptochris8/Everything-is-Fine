@@ -6,6 +6,22 @@
 { "assetCompiler": { "enabled": true, "conversionHook": "scripts/asset-conversion-hook.mjs" } }
 ```
 
+## Patterns or a hook
+
+The short version is in [SKILL.md → Prefer the simplest tool](../SKILL.md#prefer-the-simplest-tool). Pick the first row that fits:
+
+| Need | Use |
+| --- | --- |
+| Skip a whole texture or audio file type | Format toggle (`textureCompression.formats`, `audioCompression.formats`) |
+| Keep a folder or file of textures raw (UI, CPU data) | Exclude pattern |
+| Keep a GLB's embedded textures raw | Exclude pattern on the GLB path |
+| Re-include one texture inside an excluded folder | `folder/*` plus a `!folder/file.png` pattern |
+| Skip Meshopt, animation optimization, the override strip, or MP3 for specific files | Conversion hook |
+| Force-convert a texture that a pattern excludes | Conversion hook |
+| Decide from data (a JSON list, naming rules patterns cannot express) | Conversion hook |
+
+Patterns are the default because they are plain data: editable in Project Settings (with a live match count), applied to asset-browser badges in every editor, and they cannot fail. The hook is a separate JavaScript file that must stay synchronous, only drives badges in the desktop app, and falls back to built-in rules with a single warning if it fails to load. When you do write one, keep it deterministic (same input, same answer, no reliance on time or environment), return `undefined` for everything it does not care about, and leave texture folders to patterns.
+
 ## Module contract
 
 The module must export a function named `shouldConvertAsset`:
@@ -15,6 +31,7 @@ type AssetCompilerId =
   | 'glb-override-texture-strip'
   | 'ktx2-texture-compression'
   | 'ktx2-standalone-texture-compression'
+  | 'glb-animation-optimization'
   | 'meshopt-mesh-compression'
   | 'mp3-audio-compression';
 
@@ -35,7 +52,7 @@ For each asset and each compiler:
 
 1. **Wrong file type** for this compiler (a `.png` for Meshopt, a `.glb` for the loose texture compiler): not converted, hook not called.
 2. **Format toggle off** (`textureCompression.formats`, `audioCompression.formats`) or the compiler's section disabled: not converted, hook not called. The hook cannot turn a disabled format back on.
-3. **`defaultConvert`** is `false` when a `textureCompression.exclude` pattern matches (both KTX2 compilers), otherwise `true`. Meshopt, MP3, and the override strip always start from `true`.
+3. **`defaultConvert`** is `false` when a `textureCompression.exclude` pattern matches (both KTX2 compilers), otherwise `true`. Meshopt, animation optimization, MP3, and the override strip always start from `true`.
 4. **Hook** result replaces `defaultConvert` unless it is `undefined`.
 
 A GLB is asked about once per GLB compiler, so one GLB can keep its textures but still get Meshopt, or the reverse. Returning `false` for `ktx2-texture-compression` skips re-encoding all textures embedded in that GLB; the hook is not called per embedded texture.

@@ -4,6 +4,7 @@
 import { registerGeneratedClassMetadata, registerGeneratedPropertyMetadata } from '@gnsx/genesys.js';
 
 
+/** @public */
 export function registerMetadata(): void {
 }
 

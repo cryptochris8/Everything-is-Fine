@@ -1,60 +1,16 @@
 # GENESYS-SDK-BEGIN
-# Assets
 
-## Engine Assets
-- The engine's default assets are located in the **`node_modules/@gnsx/genesys.js/assets`** directory.
-- To reference these assets in your code, replace the **`node_modules/@gnsx/genesys.js`** prefix with **`@engine`** in the asset path.
+## How to Work
+- Ask only when a wrong guess would change the work: a vague term, a missing target (which node, asset, or scene), or more than one reasonable reading. When a wrong guess is cheap to undo, or the user does not answer, state your assumption in one line and continue. When the request is clear, start; do not restate it or ask for confirmation.
+- To ask, call `request_user_input` when it is in your tool list; otherwise ask in chat. Prefer one question (three at most). Put the recommended option first with a "(Recommended)" suffix, and do not add an Other option.
+- Inspect the project before you make changes, whether you build a new feature, fix a bug, or continue earlier work. For work that spans several systems or files, name what you will change before you start.
+- Skills hold Genesys-specific workflows, APIs, and pitfalls that general Three.js or game-engine knowledge gets wrong. Before you start a task, check the available skills for any that cover it, read each matching `SKILL.md`, and follow it. When a task touches several areas, read every matching skill. If a skill and your own knowledge disagree, follow the skill.
+- Keep status and progress updates brief.
 
-  **Example:**  
-  If an asset is located at:  
-  `node_modules/@gnsx/genesys.js/assets/models/SM_Cube.glb`  
-  Then the corresponding URL should be:  
-  `@engine/assets/models/SM_Cube.glb`
+## How a Genesys Project Is Organised
 
-
-## Project Assets
-- The project's assets are located in the **`/assets`** directory.
-- To reference these assets in your code, use the **fully qualified path** with **`@project`** prefix.
-
-  **Example:**  
-  If an asset is located at:  
-  `/assets/models/tiger.glb`  
-  Then the corresponding URL should be:  
-  `@project/assets/models/tiger.glb`
-
-  **Important:** Always use the complete path with `@project/assets/` prefix rather than relative paths. This ensures compatibility with publishing tools and build processes. You should **never** construct a project path programmatically.
-
-## Resolve Asset Paths
-- Using asset paths containing `@engine` or `@project` in raw html will not work out of the box as the browser doesn't know how to resolve them.
-  The solution is to resolve them using **`ENGINE.resolveAssetPathsInText`** first.
-  Example:
-  ```
-  const htmlString = '...<img src="@engine/assets/textures/Checkerboard.png">...'
-  const resolvedHtml = await ENGINE.resolveAssetPathsInText(htmlString);
-  // then use resolvedHtml as normal
-  ```
-
-## Loading Textures (Runtime)
-- `@project/`/`@engine/`: `ENGINE.resourceManager.loadTexture(ENGINE.AssetPath.fromString('@project/.../foo.png'))` — keep the logical path (`.png`/`.jpg`) even with baking.
-- Never `TextureLoader` after resolve (baking → `.ktx2`). `TextureLoader` only for external URLs; `resolveAssetPathsInText` only for HTML.
-
-## Prefabs
-- Prefabs are json files stored under `/assets` (commonly `/assets/prefabs`), with the suffix `.prefab.json`.
-- Prefer Prefabs for reusable scene-node templates when the same hierarchy is placed more than once, stays in sync, or is spawned at runtime. See the `genesys-prefabs` skill.
-- Create, place, and isolate via MCP first (`genesys.actionPrefab` / `batch_execute`); do not hand-edit `.prefab.json`.
-- When referencing classes in prefab/serialized data, use the appropriate prefix.
-  Engine classes **must** be referenced as `ENGINE.{class name}`, example: `ENGINE.SceneNode`, `ENGINE.MeshNode`.
-  Custom game classes **must** be referenced as `GAME.{class name}`, example: `GAME.MyCustomNode`, `GAME.MyPickupRoot`.
-
----
-
-# Scene And Editor State
-
-Do **not** read or open `*.genesys-scene` files unless the user explicitly asks or MCP is unavailable and filesystem fallback is appropriate. These files are large and the editor is the source of truth for scene state.
-
-For scene-visible or editor-authored changes, use Genesys MCP first when Connected or Probe-capable (see `.cursor/rules/genesys-mcp.mdc` and `.agents/skills/genesys-mcp-orchestrator/SKILL.md`). Before **mutations**, run `query_editor(getState)`; read-only queries can go straight to `query_node` / `run_script(readOnly)`. Mutate with `action_node`, `action_scene`, compact-hidden `action_prefab` (`genesys.actionPrefab`), or `batch_execute` / `run_script`. Flush scenes with `action_scene(save)`; flush Prefab Editor with `action_prefab.save` / `close`.
-
-**Before writing code, decide where this state should live** (scene/editor vs runtime behaviour) and route accordingly.
+### Scene State vs Runtime Behaviour
+Before you write code, decide where the state belongs.
 
 | State owner | Use |
 | --- | --- |
@@ -62,77 +18,73 @@ For scene-visible or editor-authored changes, use Genesys MCP first when Connect
 | **Runtime behaviour** | TypeScript — reusable gameplay logic, class defaults, constructors for new runtime objects, new SceneNode/PrimitiveNode subclasses, input, networking, UI logic, systems not already in the scene |
 | **Both** | Code first to build/register the capability, then MCP to place or configure it in the scene |
 
-Do **not** use `beginPlay`, constructors, or one-off runtime hacks to patch a specific editor-authored node just to persist a visual scene change. It is still correct to define reusable class defaults, construct runtime-created objects, and initialise behaviour in code when those values should apply to every instance or to objects spawned at runtime.
+Do **not** use `beginPlay`, constructors, or one-off runtime hacks to patch a specific editor-authored node just to persist a visual scene change. Class defaults, runtime-spawned objects, and behaviour that applies to every instance still belong in code.
 
----
+### Editor and MCP
+The running editor is the source of truth for scene state. Make scene and editor changes through Genesys MCP when its tools are available. Before your first MCP call in a task, read `.agents/skills/genesys-mcp-orchestrator/SKILL.md` and follow it.
 
-# Coding Rules
+For outdoor worlds (terrain, water, islands, foliage, sky, lighting look), read `.agents/skills/genesys-world-building/SKILL.md` too.
 
-**CRITICAL**: Never edit `auto-imports.ts` - This file is automatically generated by the build pipeline to register all @ENGINE.GameClass() decorated classes. Any manual changes will be overwritten and may break the build system. Classes with proper @ENGINE.GameClass() decorators are automatically discovered and imported.
+When MCP is not ready, follow the `recovery` hint in the error (retry, open a scene, exit play mode) or stop and tell the user. Never edit runtime game code as a stand-in for a scene edit.
 
-## General Guidelines
-- Before implementing, take a hard look of the engine and figure out what can be used to implement the user's requirement. **Do not** reinvent wheels. When using the search tool, expand the search parameters with similar keywords.
-- Work **WITH** the engine architecture, **NOT** against it. 
-- Try to find and use appropriate art assets as needed if the user does not specify. Check both engine and project assets for something that fits the feature.
-- You **should avoid** writing **monolithic code** — do not place all logic, definitions, and configurations into a single file.  
-  Instead, structure your code into modular, reusable, and maintainable components.
-- Custom node classes **must not** be registered as **`EngineClass`**, use **`GameClass`** instead.
-- **Do not** create documentation or test/example code unless specifically asked to.
-- Be **very brief** on the summary when the implementation is completed.
+Do **not** read or open `*.genesys-scene` files unless the user explicitly asks or MCP is unavailable. They are large, and the editor holds the current state.
 
-## Engine Source Reference
-- The engine source code is available in the **`.engine`** folder at the project root.
-- Use the engine source as the **primary reference** when implementing game code to understand:
-  - Class hierarchies and inheritance patterns
-  - Available methods, properties, and their signatures
-  - Engine conventions and coding patterns
-  - How built-in features are implemented
-- When extending engine classes or implementing similar functionality, **study the existing engine code** to ensure consistency and proper integration.
-- The `.engine` folder mirrors the structure of the engine package — search here first when you need to understand how a particular system works.
+### Engine Source
+Read-only engine source is in `.engine/` at the project root. `pnpm install` recreates it from `node_modules/@gnsx/genesys.js` (`src/`, `demos/examples/`, and top-level `*.md` files only), so do not edit it. Search it for class hierarchies, method signatures, and built-in implementations. Before you subclass an engine class or build a similar feature, read the matching engine code and follow its patterns.
 
-## UI
-- Any HTML UI you create **MUST NOT** be added to the document root directly. Add them to the game UI container, which can be accessed through `world.gameContainer`.
-- For in-game UI (HUD, menus, buttons, bars, inventories, crosshairs, minimaps, counters, etc.), **prefer the engine's `BaseUIComponent` widgets** (Game UI Kit) over hand-rolling HTML / CSS. See the `genesys-ui-kit` skill in `.agents/skills/genesys-ui-kit/` — its `references/catalog.md` lists every shipped widget. Fall back to raw HTML only when the user asks for a custom look or no widget matches.
-- **Safe UI (XSS):** Dynamic strings (player names, chat, scores, RPC / `joinParams`) go through text setters (`setLabel`, `setMessage`, `setTitle`) or `element.textContent` — never `innerHTML`, `setHTML`, `iconHtml` / `setIconHtml`, or `imageHtml`. Those `*Html` APIs are for developer-authored markup only (e.g. `ENGINE.Icons.*`). Do not put network or player strings into `customStyles`. Follow the **Safe UI** section in the `genesys-ui-kit` skill and `.agents/skills/genesys-ui-kit/references/safe-ui.md`.
+### Assets
+- **Engine assets** are in `node_modules/@gnsx/genesys.js/assets` (not in `.engine/`). Reference them by replacing `node_modules/@gnsx/genesys.js` with `@engine`: `node_modules/@gnsx/genesys.js/assets/models/SM_Cube.glb` → `@engine/assets/models/SM_Cube.glb`.
+- **Project assets** are in `assets/` at the project root. Reference them with the `@project/` prefix: `assets/models/tiger.glb` → `@project/assets/models/tiger.glb`.
+- When the user does not specify assets, check both locations for a match. Code art is fine when it fits the feature or helps prototype.
 
-## Testing Constraints
-- You may **only** use `pnpm build` to verify code compilation.
+## Conventions
+- Register custom node classes with `@GameClass`, never `@EngineClass`.
+- Split logic, definitions, and configuration into separate, focused modules. Do not put everything in one file.
+- Build in-game UI with the `genesys-ui` skill. It covers the `BaseUIComponent` widget catalog, the `world.gameContainer` mounting rule, and Safe UI (XSS) handling for dynamic strings. Style every screen to the game's UI direction: use the widgets where they fit, and a custom HUD layer (HTML, CSS, SVG) inside `world.gameContainer` is allowed.
+- The build copies a project asset only when its full `@project` path appears in one string literal. Do not join a folder prefix to a file name:
+  ```typescript
+  const good = '@project/assets/generated/mesh/fox.glb';
+  const bad = `${MESH_DIR}fox.glb`; // file name is not in the literal
+  ```
+  When the path is chosen at runtime, list the asset or its folder in `.genesys-project` under `alwaysCopyAssets`, for example `"alwaysCopyAssets": ["@project/assets/generated/mesh"]`.
+- The browser cannot load `@engine` or `@project` paths. Before you put them in an HTML string, resolve them with `await ENGINE.resolveAssetPathsInText(html)`. If the HTML also contains dynamic strings, follow the Safe UI rules in the `genesys-ui` skill.
+
+## Environment & Verification
+- Run every shell command (`pnpm`, `git`, TypeScript tools, etc.) from this game project root — the folder that contains `package.json` and the `.genesys-project` file. If your shell tool has a working-directory option, set it; otherwise `cd` there first. Do not rely on the default shell cwd; it may be the Genesys desktop app process directory.
+- To check that code compiles, run `pnpm build`. Do not run `tsc` directly: `pnpm build` also regenerates the property metadata the editor reads.
 - You **must** use `pnpm lint` to detect and auto-fix linting issues.
-- For every shell command (`pnpm`, `git`, TypeScript tools, etc.), set `workingDirectory` to this game project root — the folder that contains `package.json` and the `.genesys-project` file. Do not rely on the default shell cwd; it may be the Genesys desktop app process directory.
-- To register newly added game classes in the running editor, use MCP `action_build(action="buildProject")`.
-- Do **not** run `pnpm test`, `pnpm dev`, or `pnpm start` — these commands are **not supported**.
-- All testing is the responsibility of the user.  
-  You are encouraged to:
-  - Recommend suitable testing approaches.
-  - Collaborate with the user to evaluate test results.
+- Unit tests are QUnit files named `*.test.ts` under `test/`. Run them with `pnpm test`. Never put a test in `src/`: the build bundles every file there into the game. Test logic that has a right answer without a running scene: rules, scoring, damage and economy formulas, state machines, inventory, save data, seeded generation and data parsing. Keep that logic in its own module so a test can import it without building a world. Rendering, physics feel, input and UI layout are checked in Play instead. When you change logic that has tests, run `pnpm test`, and add a test for a bug you fix.
+- When MCP is available, `query_diagnostics` and editor re-queries are also valid checks, and `action_build(action="buildProject")` registers newly added game classes in the running editor (not needed before Play).
+- Entering Play already saves the scene and rebuilds the project. Do not run `action_build` before `enterPlayMode`; use it only to register new game classes.
+- Verify with one Play session: enter once, capture, exit once. Diagnose with edit-mode queries first.
+- Do not start a dev server (`pnpm dev` or similar).
 
+### Viewing Play Without MCP
+When Play is already running in the editor and MCP is off, you can capture frames from the Play listener. It is a separate service from MCP: the ban on shell calls to MCP applies only to `/mcp` and `/scenario/mcp` and does not apply to `.genesys/play-server.json`.
+- Read the `baseUrl` and token from `.genesys/play-server.json`. List surfaces with `curl.exe -sf -H "Authorization: Bearer <token>" <baseUrl>/surfaces`, save a frame with `curl.exe -sf -H "Authorization: Bearer <token>" -o .genesys/play-capture-<id>.jpg "<baseUrl>/screenshot?surface=<id>"`, then read the image. On Windows use `curl.exe`; PowerShell `curl` is a different command.
+- A missing file, refused connection, or 503 means Play is not running; ask the user. 429 means wait. Do not retry in a loop.
 
-## Prompt Handling & Clarification
+## Working agreements (always in effect)
 
-Before implementing any user request, you **must** interpret the prompt, identify ambiguities, and either:
-- State clear assumptions **before** coding, or
-- Ask the user targeted clarification questions.
+- **Making a game.** Any request to make a game ("make a…", "let's build…", a genre name, an empty or starter template, or a resumed game in `GAME.md`) starts with `genesys-game-director`. Treat it as a whole build unless the creator limits scope; the director's first-delivery bar is the definition of done. A focused fix (one bug, one widget, one node) changes only that surface and uses the owning skill.
+- **Resume.** After a context compaction or in a new session, re-read this file, `BRIEF.md`, `GAME.md` and `TECH.md` if present, then continue from **Now** in `GAME.md` (`genesys-game-director` → *Resume*), never from memory alone.
+- **Never park work behind a question.** The director's concept check is the one planned pause. Otherwise, if an answer is missing, decide, say it in one line, record it in `GAME.md` → Decisions as *assumed*, and keep building. Spending and permissions are the exception: silence means no.
+- **End a turn on a question or a handoff.** A handoff says what changed, how to play it, and what is still open. Never end on a promise ("next I'll…"): while work remains and nothing needs an answer, keep going.
+- **Talk in game language.** Describe each change as the player will experience it, and suggest what to try first. Mention files, build output or tools only if asked.
+- **Never delete, move or overwrite what you did not create** (files, folders, scene nodes). Ask first and name exactly what. Starter templates follow `genesys-game-director` → *Starter templates*.
+- **Subagents.** This line is standing permission to run subagents on independent work (`genesys-subagents`). A working mode the creator asks for (parallel, critic, step by step) applies immediately.
 
-### Required Steps
-1. **Understand intent** — Restate what the user is asking in your own words.
-2. **Identify ambiguities** — Look for vague or overloaded terms.
-3. **Clarify or assume** —
-   - If unclear, ask specific, short questions to confirm meaning.
-   - If the user cannot clarify, proceed with explicit, written assumptions.
-4. **Confirm scope** — Specify what systems, assets, or files you will change.
+## Questions and Play
 
-This process **prevents incorrect implementations** when user wording is incomplete or ambiguous.
+- "Call `request_user_input` when it is in your tool list" applies when you are the editor's built-in assistant. When the creator talks to you in another chat client with the editor connected over MCP, ask in that chat: its own question tool first (for example `AskUserQuestion`), plain chat otherwise. The editor dialog can time out unseen; a timed-out question is asked once in chat, never retried.
+- Never start or take over Play while the creator is playing (`query_editor(getPlayModeState)` first).
+- "One Play session" in the SDK rules above is for a focused change. A whole build gets four Play entries and one critic round (`genesys-verification` → *Budget*).
 
-## Implementation Plan Tags
+## Before you build
 
-When planning mixed work, tag each step by state owner so scene edits are not mistaken for code tasks:
+- A new system: check `genesys-engine` → *Engine already has it* first.
+- Anything the player sees or hears: `genesys-assets` owns the Assets table, routes, wiring and `asset-check`. This project's art routes are the **Art routes for this project** line below this SDK section.
 
-- `[Code]` — TypeScript/source changes
-- `[MCP]` — scene, node, prefab, material, transform, or other editor state changes
-- `[Asset]` — imported, moved, or generated asset files
-- `[Verify]` — build, lint, diagnostics, or editor re-query
-
-Example: `[MCP] Set MeshNode material on Floor root` → `[Verify] Re-query node and confirm scene saved`.
 # GENESYS-SDK-END
 
 # Add your custom AI instructions below.

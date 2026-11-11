@@ -1,5 +1,7 @@
 # Server Authority and Runtime
 
+Source: .engine/src/multiplayer/NetRuntime.ts, .engine/src/nodes/SceneNode.ts, .engine/src/nodes/multiplayer/ReplicationInfo.ts.
+
 ## Runtime Environment
 
 The engine runs in one of three modes. Check the current mode before writing any code that must behave differently on the server versus the client.
@@ -14,7 +16,7 @@ ENGINE.NetRuntime.isStandalone()      // true in single-player mode (no network)
 ENGINE.NetRuntime.isHeadless()        // true on a dedicated server (no rendering or UI)
 ENGINE.NetRuntime.getType()           // returns NetRuntimeType enum value
 ENGINE.NetRuntime.ensureInitialized() // browser → Standalone, Node → DedicatedServer (if not yet set)
-ENGINE.NetRuntime.initialize(type)    // explicit once-only init at app entry (preferred for servers)
+ENGINE.NetRuntime.initialize(ENGINE.NetRuntimeType.DedicatedServer) // explicit once-only init at app entry (preferred for servers)
 ```
 
 Use `isServer()` as the standard authority guard. It returns true in both single-player standalone and dedicated server modes, so code guarded by it runs correctly in all contexts.
@@ -23,7 +25,7 @@ Do not read `NetRuntime` during node construction or `initialize()`. Read it in 
 
 ## NetRole and ReplicationInfo
 
-Authority and role live on the node's `ReplicationInfo`, not on the node itself. A node only has roles once it is inside a group (see [node-replication](node-replication.md) for how the group is attached).
+Authority and role live on the entity's `ReplicationInfo`, not as fields of the node. A node has roles once it is inside a replicated entity (see [node-replication](node-replication.md)).
 
 ```typescript
 node.getReplicationInfo()?.netLocalRole   // the role this node's group has on the current machine
@@ -42,10 +44,10 @@ Role values:
 Use the convenience methods on `SceneNode` instead of reading the group's roles directly — they delegate to the node's nearest `ReplicationInfo` and default safely when there is none:
 
 ```typescript
-this.hasAuthority()             // group?.netLocalRole === Authority, else true
-this.isLocalAutonomousProxy()   // group?.netLocalRole === AutonomousProxy, else false
-this.isSimulatedProxy()         // group?.netLocalRole === SimulatedProxy, else false
-this.isOwnedByLocalClient()     // group's owning client matches the current client, else false
+this.hasAuthority()             // ReplicationInfo role === Authority, else true
+this.isLocalAutonomousProxy()   // role === AutonomousProxy, else false
+this.isSimulatedProxy()         // role === SimulatedProxy, else false
+this.isOwnedByLocalClient()     // owning client matches this client; true when there is no ReplicationInfo
 ```
 
 ## Guarding Server-Only Logic
@@ -72,8 +74,6 @@ For code outside a node (e.g., in a standalone utility function), use `NetRuntim
 
 - Writing to a replicated property from a client has no effect on the server or other clients. Always modify replicated state on the server.
 - Spawning nodes from a client does not create them on the server. Spawn networked nodes on the server (directly, or via `MultiplayerSpawner` for dynamic, non-scene-placed roots) via a `@ServerRPC`.
-- Destroying networked nodes must also happen on the server. A client can request destruction via a `@ServerRPC`; the server calls `node.destroy()` / `MultiplayerSpawner.despawn()`.
-
-> Deprecated `Actor` compatibility: `Actor.netLocalRole` / `Actor.netRemoteRole` and `Actor.hasAuthority()` (true-by-default when unreplicated) remain as compatibility shims on the deprecated `Actor` shell. New code should read roles through `getReplicationInfo()` on a `SceneNode`/`PrimitiveNode` root as shown above.
+- Destroying networked nodes must also happen on the server. A client can request destruction via a `@ServerRPC`; the server calls `node.destroy()`, or for a spawner-made root `MultiplayerSpawner.despawn(spawnId)` / `despawnInstance(root)`.
 
 Reference: See `NetRuntime.ts`, `SceneNode.ts`, and `ReplicationInfo.ts` in engine source.

@@ -6,7 +6,7 @@
 
 # Everything-is-Fine!
 
-**The Sandbox Studio game** (Genesys engine 18.0.0, TypeScript). AppalachAI Studios. A procedural comedy neighborhood: *Good neighbors. Bad decisions. Endless possibilities.*
+**The Sandbox Studio game** (Genesys engine 19.0.1, TypeScript). AppalachAI Studios. A procedural comedy neighborhood: *Good neighbors. Bad decisions. Endless possibilities.*
 _(Originally scaffolded by Builder Hub as a "Web app" on 2026-11-07. The actual type is a **Sandbox Studio game**; the profile is `C:\Users\chris\.claude\stack-profiles\sandbox.md`.)_
 
 ## Start here

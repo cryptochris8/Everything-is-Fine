@@ -1,17 +1,19 @@
 # Player Control and Autonomous Proxy
 
+Source: .engine/src/entities/PlayerController.ts, Pawn.ts, Controller.ts; owning-client prediction is the saved moves in .engine/src/nodes/movement/BasePawnMovementNode.ts.
+
 All net entities in the game are server-authoritative — the server spawns them, controls their state, and replicates updates to clients. `PlayerController` (a `SceneNode`/`Controller` subclass) and the `Pawn` it possesses (a `PrimitiveNode` subclass) are no exception: they are still replicated nodes owned and managed by the server. What makes them special is the `AutonomousProxy` role granted to the controlling client.
 
 ## AutonomousProxy: How It Works
 
-When a player joins, `GameMode` on the server:
+When a player finishes loading the level, `GameMode` on the server spawns through the scene `PlayerSpawner` (see [game-mode](game-mode.md)):
 
-1. Spawns a `PlayerController` and adds it to the world (`PlayerController.initialize()` already calls `this.replicated = true` and `this.ensureReplicationInfo().setAutonomousProxy(true)`), then sets `controller.netOwningClientId = clientId`.
-2. Spawns a `Pawn` (via `restartPlayer` → `spawnPlayerPawnWithTransform`), sets `pawn.netOwningClientId = clientId`, adds it to the world, then calls `controller.possess(pawn)` — possession flags the pawn's group `AutonomousProxy` too when the controller is a `PlayerController`.
+1. Spawns a `PlayerController` for that owner (`PlayerController.initialize()` already calls `this.replicated = true` and `this.ensureReplicationInfo().setAutonomousProxy(true)`), then sets `controller.netOwningClientId = clientId`.
+2. Spawns a `Pawn` (via `restartPlayer` → `spawnPlayerPawnWithTransform`), sets `pawn.netOwningClientId = clientId`, then calls `controller.possess(pawn)`. Possession flags the pawn `AutonomousProxy` too when the controller is a `PlayerController`.
 
-`AutonomousProxy` means the controlling client is allowed to perform movement and other actions locally without waiting for a server round-trip. The client applies input immediately for responsiveness, sends those actions to the server via `@ServerRPC`, and the server validates and replicates the authoritative result back. If the server's result differs from what the client predicted, the client corrects itself.
+`AutonomousProxy` means this client may send input for that controller and pawn. The server still owns the result. How movement is predicted and reconciled is the `genesys-movement` skill (system choice: [gameplay-systems](gameplay-systems.md)), not this page.
 
-All other nodes have `netLocalRole = SimulatedProxy` on a given client. The client displays them based on replicated state but cannot act on them.
+Other replicated entities are `SimulatedProxy` on that client: it displays them from replicated state. Unreplicated nodes have no network role.
 
 ## Checking the Controlling Client
 
@@ -28,51 +30,59 @@ Use `isOwnedByLocalClient()` to decide whether to show a local HUD element or at
 
 ## Scoping a per-player-only node
 
-There is no generic "owner-only visibility" flag on `SceneNode`/`PrimitiveNode` roots (that is an `Actor`-only compatibility property — see the footnote below). To spawn a node that only materializes for one client (a player's private inventory, hand UI, etc.), spawn it through a `MultiplayerSpawner`:
+There is no owner-only visibility flag on a `SceneNode`. To spawn a node that only materializes for one client (a player's private inventory, hand UI, etc.), spawn it through a `MultiplayerSpawner` method decorated `@ENGINE.SpawnMethod({ audience: 'owner' })`, or `spawnPrefab(path, [ownerClientId])` (full spawner example in [node-replication](node-replication.md)):
 
 ```typescript
 override beginPlay(): boolean {
   if (!super.beginPlay()) return false;
   if (this.hasAuthority()) {
-    // spawnOwnerOnly is async; do not call it from beginPlay if you need the node in this function.
-    void spawner.spawnOwnerOnly(ownerClientId);
+    // Owner-audience spawn methods are async; do not rely on the node inside beginPlay.
+    // First argument is the owner ClientId (non-zero).
+    void spawner.spawnPrivateItem(ownerClientId);
   }
   return true;
 }
 ```
 
-`spawnOwnerOnly` journals the spawn for a single-client audience and stamps `netOwningClientId` on every `ReplicationInfo` in the spawned tree — other clients never receive it. For individual properties on an already-shared node, use `net: { replicateTo: 'owner' }` instead (see [node-replication](node-replication.md)).
-
-> Deprecated `Actor` compatibility: `Actor.onlyRelevantToOwner = true` is a compatibility flag on the deprecated `Actor` shell that restricts replication of that one actor to its owning client. It has no `SceneNode`/`PrimitiveNode` equivalent. Prefer `MultiplayerSpawner.spawnOwnerOnly` or per-property `replicateTo: 'owner'` in new code.
+An owner-audience spawn journals the spawn for a single-client audience and stamps `netOwningClientId` on every `ReplicationInfo` in the spawned tree — other clients never receive it. For individual properties on an already-shared node, use `net: { replicateTo: 'owner' }` instead (see [node-replication](node-replication.md)).
 
 ## Input Flow for the Controlled Pawn
 
-The client runs the `PlayerController`'s `IInputHandler` methods locally (keyboard, mouse, gamepad events). For movement, `CharacterMovementNode` applies the input on the client immediately as a prediction, then sends it to the server. The server validates and replicates the authoritative position back; the client corrects if needed.
+The owning client runs the `PlayerController`'s `IInputHandler` methods locally (`handleKeyDown`, `handleMouseDown`, and the rest; `DefaultPlayerController` is the built-in handler). Movement prediction and reconciliation live in `genesys-movement`.
 
 For non-movement actions (firing, interacting, using an ability), send a `@ServerRPC` to the server, which validates and acts.
 
-```typescript
-// PlayerController on the client receives input:
-onKeyDown(key: string): void {
-  if (key === 'Space') {
-    this.requestJump();   // @ServerRPC — sends to server for validation
-  }
-}
+Keys arrive in `handleKeyDown(e: KeyboardEvent): boolean` on the controller (return `true` when handled, otherwise call `super`). There is no `onKeyDown(key)` method hook; `DefaultPlayerController.onKeyDown` is a `Delegate` you can `add` a `(e) => boolean` callback to instead. `getPawn()` is not generic; narrow with `instanceof`.
 
-@ENGINE.ServerRPC()
-requestJump(): void {
-  // Runs on server. Validate and tell the pawn to jump.
-  this.getPawn<MyPawn>()?.jump();
+Source: .engine/src/entities/PlayerController.ts (`handleKeyDown`), .engine/src/entities/DefaultPlayerController.ts, .engine/src/entities/Controller.ts (`getPawn`); typechecked against 18.1.0-alpha.317
+```typescript
+@ENGINE.GameClass()
+export class MyPlayerController extends ENGINE.DefaultPlayerController {
+  // Client: raw keys arrive here. Return true when handled.
+  public override handleKeyDown(e: KeyboardEvent): boolean {
+    if (e.code === 'KeyG') {
+      this.requestAbility(); // @ServerRPC — sent to the server for validation
+      return true;
+    }
+    return super.handleKeyDown(e);
+  }
+
+  @ENGINE.ServerRPC()
+  requestAbility(): void {
+    // Runs on the server. Validate, then act on the pawn.
+    const pawn = this.getPawn(); // not generic: narrow with instanceof
+    if (pawn instanceof MyPawn) pawn.useAbility();
+  }
 }
 ```
 
+Jump and other movement inputs are predicted by the movement node; send them through the pawn's movement actions, not a custom RPC.
+
 Do not modify game state (health, ammo, scores) directly from client input handlers. That must go through a `@ServerRPC` so the server validates it before the state changes.
 
-## Client-Side Prediction (CharacterPawn)
+## Movement prediction
 
-`CharacterPawn` and `CharacterMovementNode` include client-side prediction and server reconciliation automatically. The engine applies input locally on the client immediately for smooth feel, then corrects the position if the server disagrees. This is handled internally; no extra code is required when using these classes.
-
-For custom nodes that need prediction, implement the prediction logic manually and use `@ServerRPC` to send input sequences with a tick counter. Consult `MovementPrediction.ts` (`NetMovementPredictor`) in engine source for the buffering/reconciliation pattern used by `CharacterPawn`.
+`CharacterPawn` predicts and reconciles its own movement with no extra code. Which system to use and how it behaves: [gameplay-systems](gameplay-systems.md) and `genesys-movement`. A custom node that must rewind uses [network-prediction](network-prediction.md), not a hand-rolled input-sequence RPC.
 
 ## Accessing the Local Player
 

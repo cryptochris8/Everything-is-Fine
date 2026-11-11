@@ -1,142 +1,171 @@
-# Custom Modes, Transitions, and Controllers
+# Custom Movement Modes, Transitions, and Controllers
 
-## Writing a custom IMovementMode
+## Writing a custom IGSSMovementMode
 
-Implement `.engine/src/nodes/movement/mover/IMovementMode.ts`'s interface:
+Implement the `IGSSMovementMode` contract from `.engine/src/gameplay-sim/IGSSMovementMode.ts`. A body
+mode that must collide (swim, glide, wall-run) is easiest as a subclass of `GSSFallingMode` or
+`GSSWalkingMode`: they own the character-controller sweep, and the shared controller helpers are not
+exported. Every mode needs a way in and a way out.
 
-```typescript
-import * as THREE from 'three';
-import * as ENGINE from '@gnsx/genesys.js';
+Example: swimming. A trigger volume sets an external tag; walking and falling switch to `swimming`
+while it is held; swimming leaves when it is gone.
 
-class SwimmingMode implements ENGINE.IMovementMode {
-  public readonly transitions: ENGINE.IMoverTransition[] = [];
-  public maxSpeed = 4;
+Source: .engine/src/gameplay-sim/modes/GSSFallingMode.ts, IGSSMovementModeTransition.ts, GSSNode.ts (`addExternalTagId`), .engine/src/nodes/gameplay/TriggerZoneNode.ts (composed — typechecked against 18.1.0-alpha.317)
+```ts
+export const IN_WATER = ENGINE.GSSTagRegistry.register('status.InWater'); // external tag, set by the volume
 
-  public onActivate(_mover: ENGINE.MoverNode): void {}
-  public onDeactivate(_mover: ENGINE.MoverNode): void {}
-
-  public generateMove(
-    startData: ENGINE.MoverTickStartData,
-    _timeStep: ENGINE.MoverTimeStep,
-  ): ENGINE.ProposedMove {
-    const dir = startData.inputCmd.moveInput.clone();
-    if (dir.lengthSq() > 1) dir.normalize();
-    return { velocity: dir.multiplyScalar(this.maxSpeed), mixMode: ENGINE.MoveMixMode.Override };
+class EnterWater implements ENGINE.IGSSMovementModeTransition {
+  public evaluate(ctx: ENGINE.GSSMovementContext): string | null {
+    return ctx.tags.has(IN_WATER) ? 'swimming' : null;
   }
+}
+class LeaveWater implements ENGINE.IGSSMovementModeTransition {
+  public evaluate(ctx: ENGINE.GSSMovementContext): string | null {
+    return ctx.tags.has(IN_WATER) ? null : 'falling'; // falling hands over to walking on contact
+  }
+}
 
-  public simulationTick(params: ENGINE.SimulationTickParams): ENGINE.MoverTickEndData {
-    const { startData, proposedMove, timeStep } = params;
-    const deltaTime = Math.min(timeStep.stepMs / 1000, 0.2);
-    const syncState = { ...startData.syncState, custom: startData.syncState.custom.clone(), tags: ['mover.swimming'] };
-    syncState.position.addScaledVector(proposedMove.velocity, deltaTime);
-    return { syncState, auxState: { custom: startData.auxState.custom.clone() } };
+/** Falling-mode subclass: inherits the controller sweep, so walls and the pool floor collide. */
+export class SwimmingMode extends ENGINE.GSSFallingMode {
+  public swimUp = 3;   // m/s while Jump is held
+  public sink = -1;    // m/s otherwise
+  public speedScale = 0.6;
+  constructor() {
+    super({ id: 'swimming', maxMidAirJumps: 0, accelerationLambda: 4, decelerationLambda: 2 });
+    this.transitions.length = 0;          // drop falling's "grounded → walking" exit
+    this.transitions.push(new LeaveWater());
+  }
+  public override generateMove(ctx: ENGINE.GSSMovementContext, proposals: readonly ENGINE.GSSProposedMove[]): ENGINE.GSSDesiredMove {
+    const move = super.generateMove(ctx, proposals); // MoveSpeed attribute, camera-relative, proposals mixed
+    move.velocity.x *= this.speedScale;
+    move.velocity.z *= this.speedScale; // leave Y: it is the current vertical speed plus any effect
+    return move;
+  }
+  public override tick(ctx: ENGINE.GSSMovementSimContext, move: ENGINE.GSSDesiredMove, dt: number): void {
+    const target = ctx.inputTags.has(ENGINE.GSSTags.InputJump) ? this.swimUp : this.sink;
+    const g = (ctx.target.getPhysicsEngine()?.getOptions()?.gravity.y ?? -9.81) * this.characterControllerOptions.simulatedGravityScale;
+    // super.tick adds g*dt to move.velocity.y; pre-subtract it so the net vertical speed is the damped swim target
+    const vy = THREE.MathUtils.damp(ctx.getVelocityY(), target, 6, dt);
+    move.velocity.y = vy - g * Math.min(dt, 0.2);
+    super.tick(ctx, move, dt);
+  }
+}
+
+/** Trigger volume over the water. Place it with MCP; size it to the swimmable depth. */
+@ENGINE.GameClass()
+export class WaterVolume extends ENGINE.TriggerZoneNode {
+  public override beginPlay(): boolean {
+    if (!super.beginPlay()) return false;
+    this.onActorEntered.add((actor) => actor.getNode(ENGINE.GSSNode)?.addExternalTagId(IN_WATER));
+    this.onActorExited.add((actor) => actor.getNode(ENGINE.GSSNode)?.removeExternalTagId(IN_WATER));
+    return true;
   }
 }
 ```
+
+Register on the pawn, in `createGSSNode()`. Walking and falling get the way in; the first non-null
+transition wins, so put it first.
+
+Source: .engine/src/gameplay-sim/entities/GSSCharacterPawn.ts (`createGSSNode`) (composed — typechecked against 18.1.0-alpha.317)
+```ts
+@ENGINE.GameClass()
+export class Swimmer extends ENGINE.GSSCharacterPawn {
+  protected override createGSSNode(): ENGINE.GSSNode {
+    const sim = super.createGSSNode();
+    const walking = new ENGINE.GSSWalkingMode();
+    const falling = new ENGINE.GSSFallingMode();
+    walking.transitions.unshift(new EnterWater());
+    falling.transitions.unshift(new EnterWater());
+    sim.addMovementMode(walking);                  // replace in place, now with a way into water
+    sim.addMovementMode(falling);
+    sim.addMovementMode(new SwimmingMode());
+    return sim;
+  }
+}
+```
+
+Size the volume to the swimmable depth: inside it the pawn always swims, so shallow water left outside it stays walking. Swim animation is
+presentation: react to `onMovementModeChanged` ([gss-mechanics](gss-mechanics.md)). Overlap events
+between a trigger and the kinematic character capsule, and the in-water feel, verify in Play. A mode
+written from scratch (no subclass) must collide on its own: `ctx.translate` alone moves through
+geometry, like `GSSIdleMode`'s effect displacement.
 
 Required members:
 
-- `transitions: IMoverTransition[]` — outgoing automatic transitions, checked at the end of
-  every tick this mode is active. `[]` if none.
-- `generateMove(startData, timeStep): ProposedMove` — pure intent, no side effects. Read
-  `startData.inputCmd`/`syncState`/`auxState`; do not mutate them or touch the physics engine
-  here. This may run ahead of `simulationTick` (layered moves are applied to its output first).
-- `simulationTick(params): MoverTickEndData` — the only place to call into physics/collision
-  (e.g. `mover.getPhysicsEngine()`), and the only place that produces the authoritative
-  `syncState`/`auxState` for the tick. Always clone `startData.syncState`/`auxState` rather than
-  mutating them in place (see the built-in modes' `cloneSyncState` helper pattern in
-  `CharacterMovementShared.ts`).
-- `onActivate(mover)` / `onDeactivate(mover)` — called on every switch into/out of this mode.
-- Optional `cleanup(mover)` — called from `MoverNode.endPlay` for every registered mode
-  (active or not). Use for resources that outlive mode switches (a shared physics controller);
-  make it idempotent if multiple modes share the same resource (see `WalkingMode`/`FallingMode`).
-- Optional `onPostPhysics(mover, deltaTime)` — runs on the mode that was just simulated, before
-  a queued mode switch is applied. Use for post-physics-only work (`VehicleMode` uses this for
-  its max-speed clamp and wheel-mesh visual update).
+- `id` — registration id, also the target of `queueMovementMode` and transitions.
+- `transitions` — outgoing automatic transitions, checked after movement.
+- `generateMove(ctx, proposals)` — the desired velocity for this tick, from input and the effect proposals. Do not call physics and do not mutate anything. `mixProposedMoves(seed, proposals)` applies each proposal per axis. A mode that ignores `proposals` does not move from effects.
+- `tick(ctx, proposedMove, dt)` — integrate that desired move (character controller, etc.)
+  through `ctx`; `dt` is in seconds. `proposedMove.velocity` is already resolved, including effect contributions the mode chose to mix.
+- `onActivate(target)` / `onDeactivate(target)` — mode switch hooks.
+- Optional `onTeleported(ctx)` (runs instead of `tick` on a teleport tick), `cleanup(target)`, `onPostPhysics(target)`, `applySyncState(target, state)`,
+  `getRewindRadius(dt, attrs)`. `tick` and `getRewindRadius` take seconds. `onPostPhysics` runs after the physics step and takes no delta.
 
-Set `syncState.tags` to a short, dot-namespaced string array (built-ins use a `'mover.'` prefix,
-e.g. `'mover.onGround'`) so `mover.hasSyncTag(tag)` prefix-matching stays useful.
+### The two contexts
 
-## Writing a custom IMoverTransition
+A mode never sees the sim node or its `GSSSyncState`. It gets a context instead, in two
+flavours over the same object:
 
+- `GSSMovementContext` — the read view, handed to `generateMove` and to transitions. Input, input-tag
+  edges, attributes, tags, custom data, pose getters, and `target`. Vector/Euler getters return
+  copies; `getPositionX()` / `getYaw()` / `getVelocityX()` and the rest return scalars with no
+  allocation.
+- `GSSMovementSimContext` — the write view, handed only to `tick`. Everything above plus
+  `setPosition(x, y, z)` / `setPositionX/Y/Z` / `setPositionFrom(v)`, `translate(delta, scale?)`,
+  `setRotation(pitch, yaw, roll, order?)` / `setPitch` / `setYaw` / `setRoll` /
+  `setRotationFrom(euler)`, `setVelocity(x, y, z)` / `setVelocityX/Y/Z` / `setVelocityFrom(v)`, and
+  writable `tags` / `custom`. Component setters leave the other axes alone. Omitting `order` on
+  `setRotation` keeps the current Euler order.
+
+Splitting them is what keeps "decide" free of side effects, which is what makes a tick safe to
+replay when a correction arrives.
+
+`tick` writes through `ctx` and nothing else. The node applies the resulting position and
+rotation to the target in world space as soon as the mode returns, so a mode that also writes the
+target duplicates that work and risks disagreeing with it. Use `ctx.target` only to read, to sweep a
+character controller, or to set `setPhysicsTransformUpdateFlags` — the physics-integration policy is
+the mode's, since only the mode knows whether it drives the body kinematically or lets physics own
+it. The hooks that run outside a tick (`onActivate` and friends) get `target` directly, and it is
+also the identity to register a character controller under.
+
+When a mode owns something the node cannot place on its own — a character controller's body, say —
+implement `applySyncState(target, state)` to reconcile it after a correction. `state` is a
+`GSSStateReader`: pose, attributes, tags, and custom data, all read-only. Without it the node
+just teleports the target.
+
+## Writing a custom IGSSMovementModeTransition
+
+A transition reads the `GSSMovementContext` (read-only) and returns a mode id or `null`. `EnterWater`
+and `LeaveWater` above are complete examples. Transitions live on the mode's `transitions` array
+(readonly property, mutable array): `push` adds a fallback, `unshift` adds a priority check.
+
+First non-null `evaluate` result wins. An ability or effect requests a switch this tick with
+`ctx.movement.queueMovementMode(id, priority?)`; the switch runs in post-physics.
+
+## Writing a custom IGSSInputProducer / controller
+
+`GSSPlayerController` is the reference biped producer: it writes `moveInput`,
+`controlRotation`, and currently-down input tags (`input.Jump`, `input.Dash`, …). It does **not**
+detect edges.
+
+`AIController` implements the same producer against `GSSNode` for path follow / look-at.
+
+Source: .engine/src/gameplay-sim/IGSSInputProducer.ts, entities/GSSPlayerController.ts
 ```typescript
-class ToSwimmingTransition implements ENGINE.IMoverTransition {
-  evaluate(startData: ENGINE.MoverTickStartData, mover: ENGINE.MoverNode): string | null {
-    return mover.hasSyncTag('mover.inWater', true) ? 'swimming' : null;
+class MyProducer implements ENGINE.IGSSInputProducer {
+  produceInputCmd(cmd: ENGINE.GSSInputCmd, _dt: number): void {
+    cmd.moveInput.set(0, 0, 1);
+    ENGINE.tagSetAdd(cmd.inputTagsDown, ENGINE.GSSTags.InputJump);
   }
 }
+
+sim.setInputProducer(new MyProducer());
 ```
 
-`evaluate(startData, mover): string | null` returns a target mode name or `null` to stay. Only
-the first transition (in `IMovementMode.transitions` array order) that returns non-null wins per
-tick. A transition can inspect `startData.inputCmd.suggestedMode` itself to decide whether
-physics-driven detection should always win (ignore it) or input should override physics (check
-it) — see the two contrasting examples in `IMoverTransition.ts`'s doc comment.
+A sim node has **one** producer — `setInputProducer` replaces whatever was there and warns, since
+that usually means two controllers are fighting over the same pawn. Clear it with
+`setInputProducer(null)` when the owner goes away, guarded by `getInputProducer() === this` so a
+late unpossess cannot clear a producer that has already been replaced.
 
-## Writing a custom IMovementInputProducer / controller
-
-`MoverPlayerController` (`.engine/src/entities/MoverPlayerController.ts`) is the reference
-implementation for a biped Walking/Falling controller. The contract:
-
-```typescript
-export interface IMovementInputProducer {
-  produceInput(simTimeMs: number, cmd: MovementInputCmd): void;
-}
-```
-
-`produceInput` is called once per tick, in registration order, for every producer registered on
-a `MoverNode`. `cmd` arrives pre-initialised with zero/false values — accumulate/merge into it
-rather than unconditionally overwriting, since multiple producers (e.g. a player controller
-plus a temporary ability override) may be registered on the same `MoverNode` simultaneously.
-
-Wiring pattern, verified from `MoverPlayerController`:
-
-```typescript
-@ENGINE.GameClass()
-class VehicleController extends ENGINE.PlayerController implements ENGINE.IMovementInputProducer {
-  private moverNode: ENGINE.MoverNode | null = null;
-
-  protected override onPossess(pawn: ENGINE.Pawn): void {
-    super.onPossess(pawn);
-    this.moverNode = pawn.getNode(ENGINE.MoverNode);
-    this.moverNode?.addInputProducer(this);
-  }
-
-  protected override onUnpossess(pawn: ENGINE.Pawn): void {
-    this.moverNode?.removeInputProducer(this);
-    this.moverNode = null;
-    super.onUnpossess(pawn);
-  }
-
-  public produceInput(_simTimeMs: number, cmd: ENGINE.MovementInputCmd): void {
-    // VehicleMode reads moveInput.z as throttle, moveInput.x as steering, jumpPressed as handbrake.
-    cmd.moveInput.z += this.throttle;
-    cmd.moveInput.x += this.steering;
-    cmd.jumpPressed = cmd.jumpPressed || this.handbrakeHeld;
-  }
-
-  private throttle = 0;
-  private steering = 0;
-  private handbrakeHeld = false;
-}
-```
-
-Key points, all verified against `MoverPlayerController`:
-
-- Get the `MoverNode` off the possessed pawn with `pawn.getNode(ENGINE.MoverNode)` in
-  `onPossess` (a protected hook on `Controller`/`PlayerController`, called after possession is
-  established) — do not assume the pawn exposes a `movementNode`-style property.
-  `MoverCharacterPawn.getMoverNode()` also works if the pawn type is known statically.
-  `MoverPlayerController` warns and no-ops if the possessed pawn has no `MoverNode`.
-- Call `moverNode.addInputProducer(this)` in `onPossess` and
-  `moverNode.removeInputProducer(this)` in `onUnpossess` — mirror the lifecycle exactly, or the
-  controller keeps producing input for a pawn it no longer possesses.
-- `MoverPlayerController` is Walking/Falling-only. Its own doc comment states other
-  locomotion styles (vehicle, airplane, top-down) need dedicated controllers that write the axis
-  layout those specific modes expect (see [mover-modes](mover-modes.md) for each mode's axis
-  mapping) — do not subclass or reuse it for a vehicle/airplane/top-down pawn; write a new
-  `IMovementInputProducer` as shown above instead.
-- An AI/NPC driver does not need a `PlayerController` at all — anything implementing
-  `IMovementInputProducer` can register on a `MoverNode` (see `IMovementInputProducer.ts`'s own
-  doc comment, which explicitly calls out an `AIController` steering toward a navigation target
-  as a valid producer alongside `PlayerController`).
+`cmd` belongs to the node: fill it, never retain it. `dt` is the tick delta in seconds — use it for
+rate-based work (physics, gamepad look, turn rate) rather than deriving a delta from sim time.

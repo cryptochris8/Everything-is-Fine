@@ -1,9 +1,14 @@
-// Genesys MCP run_script body — extract a chunk of the live scene for the Blender bridge.
-// Replace OFFSET / COUNT before each call. Chunk size 40 is a safe default.
+// Genesys MCP run_script(readOnly) body — extract one chunk of the live scene for the Blender bridge.
+// Generate the body with `python3 <this-skill>/scripts/make_bridge_scripts.py extract --offset N`
+// (it injects OFFSET / COUNT) or edit the two constants by hand. Call again with
+// OFFSET = the returned nextOffset until done is true; save each response object as
+// .scratch/blender-bridge/chunks/chunk-<offset>.json.
 // This file is a run_script body (wrapped in async by Genesys) — top-level await is intentional.
 
 const OFFSET = 0;
 const COUNT = 40;
+// The run_script response must stay well under 200 KB; larger chunks shrink themselves.
+const MAX_PAYLOAD_BYTES = 150000;
 
 const MIRRORABLE = new Set([
   "ENGINE.SceneNode",
@@ -50,6 +55,24 @@ function worldTransform(component) {
     rotation: vector3(component?.transform?.rotation, [0, 0, 0]),
     scale: vector3(component?.transform?.scale, [1, 1, 1]),
   };
+}
+
+// A run_script / genesys.* result over the response limit comes back cut to 100 items with a
+// _meta block. A cut inventory would silently drop nodes, so stop instead.
+function assertComplete(label, result) {
+  const meta = result?._meta;
+  if (meta || result?.truncated === true) {
+    throw new Error(
+      `${label} result was truncated by the MCP response limit (${JSON.stringify(meta ?? { truncated: true })}); ` +
+        "complete extraction cannot be proven",
+    );
+  }
+  return result;
+}
+
+function prefabPathOf(node) {
+  if (node?.isPrefabInstance === true) return node.prefabPath || "(prefab instance)";
+  return typeof node?.prefabPath === "string" && node.prefabPath ? node.prefabPath : null;
 }
 
 function hashInventory(ids) {
@@ -102,6 +125,7 @@ for (const [label, tree] of [
   ["LightNode", lightTree],
   ["SceneNode", sceneTree],
 ]) {
+  assertComplete(`${label} getTree`, tree);
   if ((tree.nodes || []).length >= 500) {
     throw new Error(
       `${label} inventory reached the 500-node query limit; ` +
@@ -125,6 +149,7 @@ for (const query of broadPasses) {
     ...(query ? { query } : {}),
     limit: 500,
   });
+  assertComplete(`getTree(${query || "all"})`, tree);
   for (const node of tree.nodes || []) {
     if (!byId.has(node.id)) byId.set(node.id, node);
   }
@@ -138,6 +163,7 @@ async function detailsFor(ids) {
       operation: "getDetails",
       componentIds: slice,
     });
+    assertComplete("getDetails", result);
     for (const component of result.components || []) {
       if (component?.id && !component.error) out.set(component.id, component);
     }
@@ -153,6 +179,7 @@ async function editableFor(ids) {
       operation: "getEditableProperties",
       componentIds: slice,
     });
+    assertComplete("getEditableProperties", result);
     for (const component of result.components || []) {
       if (component?.id) out.set(component.id, component);
     }
@@ -182,6 +209,10 @@ function mirrorableAncestry(nodeId) {
     }
     seen.add(current.id);
     chain.push(current);
+    // Prefab instances are skipped whole: their children belong to the prefab asset, and
+    // moving them here would fight the prefab (edit prefabs with genesys-prefabs instead).
+    const prefab = prefabPathOf(current);
+    if (prefab) return { ok: false, blocker: `prefab instance ${prefab}`, chain };
     if (!current.parentId) return { ok: true, blocker: null, chain };
     const parent = byId.get(current.parentId);
     if (!parent) {
@@ -250,6 +281,7 @@ for (const query of rootOrderCandidates) {
     ...(query ? { query } : {}),
     limit: 500,
   });
+  assertComplete(`getTree(${query || "all"}) root order`, tree);
   const nodes = tree.nodes || [];
   if (nodes.length >= 500) continue;
   // Genesys marks every top-level node with isWorldRoot; there is no synthetic
@@ -351,16 +383,20 @@ for (let index = 0; index < slice.length; index += 1) {
   let modelUrl = null;
   let geometry = null;
   let material = null;
+  // A node whose model or geometry cannot be read still travels: Blender shows a placeholder
+  // with its transform, and the sync reports it instead of failing.
+  let unsupportedReason = null;
   if (node.className === "ENGINE.ModelMeshNode") {
     modelUrl = propertyValue(editableMap.get(node.id), "modelUrl");
     if (typeof modelUrl !== "string" || !modelUrl) {
-      throw new Error(`Missing modelUrl for ${node.id} (${node.name})`);
+      modelUrl = null;
+      unsupportedReason = "modelUrl not readable";
     }
   } else if (node.className === "ENGINE.MeshNode") {
     const editable = editableMap.get(node.id);
     geometry = propertyValue(editable, "geometry") ?? details.geometry ?? null;
     material = propertyValue(editable, "material") ?? details.material ?? null;
-    if (!geometry) throw new Error(`Missing geometry for ${node.id} (${node.name})`);
+    if (!geometry) unsupportedReason = "geometry not readable";
   }
 
   // Under the actor-ancestry rule, every mirrored parent is itself mirrored,
@@ -387,58 +423,47 @@ for (let index = 0; index < slice.length; index += 1) {
     modelUrl,
     geometry,
     material,
+    unsupportedReason,
   });
 }
 
 const inventoryHash = hashInventory(sortedEligible.map((node) => node.id));
-const chunk = {
-  format: "genesys-blender-bridge-chunk",
-  version: 1,
-  sourceScene: state.activeScenePath,
-  totalNodes: byId.size,
-  total,
-  offset: OFFSET,
-  count: records.length,
-  inventoryHash,
-  rootOrderSource,
-  skippedCount: Object.values(skippedByBlockingClass).reduce((a, b) => a + b, 0),
-  skippedByBlockingClass,
-  records,
-};
+const skippedCount = Object.values(skippedByBlockingClass).reduce((a, b) => a + b, 0);
 
-// Compact transfer: gzip+base64 keeps large primitive payloads under MCP limits.
-function toBase64(bytes) {
-  const alphabet =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  let output = "";
-  for (let i = 0; i < bytes.length; i += 3) {
-    const a = bytes[i];
-    const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
-    const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
-    const triplet = (a << 16) | (b << 8) | c;
-    output += alphabet[(triplet >> 18) & 63];
-    output += alphabet[(triplet >> 12) & 63];
-    output += i + 1 < bytes.length ? alphabet[(triplet >> 6) & 63] : "=";
-    output += i + 2 < bytes.length ? alphabet[triplet & 63] : "=";
-  }
-  return output;
+// The run_script sandbox has no CompressionStream, so the chunk travels as plain JSON.
+function chunkOf(chunkRecords) {
+  const nextOffset = OFFSET + chunkRecords.length;
+  return {
+    format: "genesys-blender-bridge-chunk",
+    version: 1,
+    sourceScene: state.activeScenePath,
+    totalNodes: byId.size,
+    total,
+    offset: OFFSET,
+    count: chunkRecords.length,
+    nextOffset,
+    done: nextOffset >= total,
+    inventoryHash,
+    rootOrderSource,
+    skippedCount,
+    skippedByBlockingClass,
+    records: chunkRecords,
+  };
 }
 
-const encoded = new TextEncoder().encode(JSON.stringify(chunk));
-const stream = new CompressionStream("gzip");
-const writer = stream.writable.getWriter();
-writer.write(encoded);
-writer.close();
-const compressed = new Uint8Array(await new Response(stream.readable).arrayBuffer());
+function payloadBytes(chunk) {
+  return new TextEncoder().encode(JSON.stringify(chunk)).length;
+}
 
-return {
-  format: "genesys-blender-bridge-chunk-compressed",
-  version: 1,
-  encoding: "gzip+base64",
-  sourceScene: state.activeScenePath,
-  offset: OFFSET,
-  count: records.length,
-  total,
-  inventoryHash,
-  payload: toBase64(compressed),
-};
+// Shrink the chunk until the payload fits; the caller continues from nextOffset.
+let chunk = chunkOf(records);
+while (payloadBytes(chunk) > MAX_PAYLOAD_BYTES && chunk.records.length > 1) {
+  chunk = chunkOf(chunk.records.slice(0, Math.max(1, Math.floor(chunk.records.length / 2))));
+}
+if (payloadBytes(chunk) > MAX_PAYLOAD_BYTES) {
+  throw new Error(
+    `Record ${chunk.records[0]?.id} (${chunk.records[0]?.name}) alone exceeds ${MAX_PAYLOAD_BYTES} payload bytes`,
+  );
+}
+
+return chunk;

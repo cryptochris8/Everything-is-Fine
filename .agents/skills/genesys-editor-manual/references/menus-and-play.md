@@ -2,7 +2,7 @@
 
 Exact labels from the Genesys desktop title bar.
 
-For Getting Started, Environment Setup, Genesys AI / MCP settings, Project Recovery, and Play Local Project, see [app-setup-and-recovery.md](app-setup-and-recovery.md).
+For Getting Started, Environment Setup, Genesys AI / MCP settings, and Project Recovery, see [app-setup-and-recovery.md](app-setup-and-recovery.md).
 
 ## Title bar Menu (hamburger — tooltip Menu)
 
@@ -10,31 +10,32 @@ For Getting Started, Environment Setup, Genesys AI / MCP settings, Project Recov
 
 | Item | Notes |
 | --- | --- |
-| Exit Play Mode | While playing; `Esc` (games that handle Escape keep it) / `F8` (always exits) |
+| Exit Play Mode | While playing. `Esc` exits only when the game did not consume Escape and pointer lock is off; `F8` always exits ([hotkeys](hotkeys.md)) |
 | New Scene | New-scene / Save Scene flow |
 | Save Scene | `Ctrl/Cmd+S` |
 | Save Scene As | Name/path prompt |
 | Build Project | `Ctrl/Cmd+B` — rebuild `.dist/game.js`, register `@GameClass()` |
 | Play Game Default Scene | F5 |
 | Play Current Scene | F6 |
+| Play in Editor | Launch mode |
 | Play in New Window | Launch mode |
 | Play in Mobile Preview | Launch mode |
 | Project Settings | Renderer, asset compiler, defaults |
 | App Settings | See submenu below |
-| Editor Settings → Panel Background Opacity | UI panel opacity (+ reset) |
 | Upload Project | Upload flow |
 | Tools → New Asset Pack… | Local empty pack scaffold |
 | Tools → Export Asset Pack… | Export dialog |
 | Tools → Browse Asset Packs | Catalog / cloud packs; Manage Registries inside dialog |
 | Tools → Generate NavMesh | NavMesh dialog |
+| Store Manager | Review and edit the game's store items; opening it links the project as a game (writes `gameId`). MCP: `query_store` / `action_store` (`monetization-store-items`) |
 | Tools → Remove Imported Mesh Combinations | Cleanup |
 | Tools → Clear Thumbnails | Clear thumbs + IDB screenshots |
-| Tools → Performance Monitor / Profiler / View Perf Snapshot… | Perf UI |
-| Show in Explorer | `Ctrl/Cmd+E` — OS folder |
+| Tools → Performance Monitor / Profiler | The monitor is a compact HUD. Profiler provides rolling Insights reports and detailed Trace recording. Artifacts go to `{project}/.editor/profiles` (hidden in the asset browser). |
+| Show in Explorer | Opens the project's OS folder (`Ctrl/Cmd+E`, desktop) |
 | Open in Code Editor | Opens `{project}.code-workspace` |
-| View → Reload (`Ctrl/Cmd+R`) / Toggle Full Screen (F11) / Reset Layout | |
+| View → Reload (`Ctrl/Cmd+R`) / Toggle Full Screen (F11) / Reset Layout · panel checkboxes (Assistant 1, Outliner 2, Inspector 3, Asset Browser 4, Viewport 5) · Panel Background Opacity | |
 | Help → Hot Keys (F1) / Toggle Dev Console (F12) / Open App Logs Folder / GPU Diagnostics… / Changelog / Check for Updates / About | |
-| Quit | `Ctrl/Cmd+Q` |
+| Quit | Closes the app (`Ctrl/Cmd+Q`, desktop) |
 
 ### Dashboard / home (no editor project)
 
@@ -61,11 +62,13 @@ Menu shows View / Help / Quit, plus the same App Settings and Editor Settings en
 | Errors (alert) | Build / play error overlay (Fix with AI when available) |
 | Agent Nova / AI Assistant | Toggle assistant (`1`) *(when Assistant enabled)* |
 | Build Lightmap | Bake dialog (desktop + open scene) |
-| Foundry | Scenario / generative assets (UI only) |
+| Foundry | The editor's own generative-asset dialog. Agents generate art through `genesys-generated-assets` (Scenario MCP); Foundry's MCP twin `action_asset_generation` is used only when the user asks for Foundry. Prompt enhance is UI only |
 | Profiler / Upload | Also under More actions on narrow layouts |
 | Play + chevron | Start play; open Play mode options |
 | Network | Multiplayer clients 1–4; server/client lag simulation |
-| Exit Play / Play Dev Console | While playing; Exit is `Esc` when the game does not use it, or `F8` always; Dev Console is F12 |
+| Exit Play / Play Dev Console | While playing; Exit is `Esc` when the game did not consume it and pointer lock is off, or `F8` always; Dev Console is F12 |
+
+Agent Play queries: `query_node` returns `play_mode_active` during Play; use compact-hidden `query_play` (`getPlayerPawns`, `getNodeTransform`, `raycast`). Before Play, `query_node` `checkSpawnPoints` validates PlayerStart floors.
 
 ## Play mode options (Play ▾)
 
@@ -73,7 +76,19 @@ Menu shows View / Help / Quit, plus the same App Settings and Editor Settings en
 | --- | --- |
 | Play in Editor / New Window / Mobile Preview | Launch mode |
 | Game Default Scene / Current Scene | F5 / F6 |
-| Play Mode Settings | Size, DPR, orientation, touch emulation, device frame |
+| Play Mode Settings | Size, pixel ratio (Native or device preset unless Override is on), orientation, touch emulation, device frame |
+
+Play shows the first load as players see it. An opaque "Starting Play…" plate covers the game's start (level load and `preStart`) until the game is running. Then the plate fades out and any cover the game draws in `preStart` is visible. A small bottom-left status chip (label and progress bar, editor only, never takes input) shows readiness until the world is ready.
+
+## Profiler
+
+**Insights** is a Play preference. The Edit switch does not collect frames in the editor; it decides whether the next Play session starts collecting a rolling window (120 frames by default; 30–1800 or Fill window and freeze in its Advanced settings). The Play switch changes the running session and saves the same preference. **Generate Report** saves world, memory, timing, and optimization guidance to `.editor/profiles`. Edit mode can **Open Report Viewer** at any time. Play only confirms the saved path, so the viewer cannot perturb game timings or steal input.
+
+**Trace** is always visible. In Edit, the Trace switch arms recording for the next Play. A hint warns that trace files can grow very large and are expensive for an AI agent to parse. In desktop Play it offers **Start Trace**, which streams a trace file to `.editor/profiles` and shows elapsed time, bytes, event count, and **Stop Recording** while recording. The Trace Viewer opens when recording stops. **Enable live trace** under Advanced opens it when recording starts and tails the file instead. **Open Trace** loads the newest trace or the one just stopped. Drag the frame strip or the ruler to select a range. **Advanced** also sets the stop limits: duration defaults to 900 seconds, size to 2048 MB, and frames and minimum span duration to 0. Zero means that axis is unlimited. Each field has a hover hint and its own revert button. Unsupported controls are omitted rather than disabled.
+
+While a streamed trace records, the Profiler panel shows elapsed time, file size, and **Stop Recording**. If writing fails, the panel reports the error and whether a partial file was kept.
+
+Insights and Trace answer frame cost. JavaScript heap and VRAM captures are a separate workflow in [memory-profiling](../../memory-profiling/SKILL.md). Those files go to `{project}/.genesys/captures`, not `.editor/profiles`. Compare two heap captures with `compare-heap-captures.mjs` and two GPU captures with `compare-gpu-captures.mjs`.
 
 ## NavMesh dialog (Tools → Generate NavMesh)
 
